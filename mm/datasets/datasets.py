@@ -10,7 +10,7 @@ from torch.utils.data import Dataset, DataLoader
 import lightning.pytorch as pl
 from matplotlib import pyplot as plt
 
-class TemplateDatasetModule(pl.LightningDataModule):
+class MovingMnistModule(pl.LightningDataModule):
     """A Pytorch Lightning module for Datasets"""
 
     #def __init__(self, cfg):
@@ -23,7 +23,7 @@ class TemplateDatasetModule(pl.LightningDataModule):
         Returns:
           None
         """
-        super(TemplateDatasetModule, self).__init__()
+        super(MovingMnistModule, self).__init__()
         #self.cfg = cfg
 
 
@@ -31,9 +31,9 @@ class TemplateDatasetModule(pl.LightningDataModule):
         """Dataloader and iterators for training, validation and test data"""
         ########## Point dataset splits
 
-        train_set = TemplatePytorchDataset(split="train")
-        val_set = TemplatePytorchDataset(split="val")
-        test_set = TemplatePytorchDataset(split="test")
+        train_set = MovingMnistDataset(split="train")
+        val_set = MovingMnistDataset(split="val")
+        test_set = MovingMnistDataset(split="test")
 
         ########## Generate dataloaders and iterables
 
@@ -90,7 +90,7 @@ class TemplateDatasetModule(pl.LightningDataModule):
         return self.test_loader
 
 
-class TemplatePytorchDataset(Dataset):
+class MovingMnistDataset(Dataset):
     """Dataset class for a dataset"""
 
     def __init__(self, split = "Train", cfg=None):
@@ -121,6 +121,7 @@ class TemplatePytorchDataset(Dataset):
 
         self.data = self.data[from_idx:to_idx]/255.
         self.dataset_size = self.data.shape[0]
+
     def __len__(self):
         return self.dataset_size
 
@@ -145,18 +146,7 @@ class TemplatePytorchDataset(Dataset):
 if __name__ == "__main__":
     #config_filename = # location of config file
     #cfg = yaml.safe_load(open(config_filename))
-    #train_data = TemplatePytorchDataset(split="train")
-    #val_data = TemplatePytorchDataset(split="val")
-    #test_data = TemplatePytorchDataset(split="test")
-    #print(len(train_data))
-    #print(len(val_data))
-    #print(len(test_data))
-    #sample = train_data[0]
-    #print(sample["input"].shape)
-    #print(sample["target_output"].shape)
-    #exit()
-    #print(len(data))
-    data = TemplateDatasetModule()
+    data = MovingMnistModule()
     data.setup()
     train_loader = data.train_loader
     for i, batch in enumerate(train_loader):
