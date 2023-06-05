@@ -46,7 +46,7 @@ if __name__ == "__main__":
     model_path = args.resume if args.resume else args.weights
     if model_path:
         ###### Load config and update parameters
-        checkpoint_path = "./mm/runs/" + model_path + "/Train/checkpoints/last.ckpt"
+        checkpoint_path = "./mm/runs/" + model_path + "/checkpoints/last.ckpt"
         config_filename = "./mm/runs/" + model_path + "/Train/hparams.yaml"
         cfg = yaml.safe_load(open(config_filename))
 
