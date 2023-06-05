@@ -125,7 +125,7 @@ if __name__ == "__main__":
         ],  
         callbacks=[lr_monitor, checkpoint],
         #strategy = DDPStrategy(find_unused_parameters=False),
-        #precision=16,
+        precision='16-mixed',
         check_val_every_n_epoch=1,
         limit_train_batches=1.0,
         limit_val_batches=1.0,
