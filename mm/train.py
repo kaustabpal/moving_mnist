@@ -87,8 +87,8 @@ if __name__ == "__main__":
 
     ###### Dataset
     data = MovingMnistModule()
-    data.setup()
-    print("Data setup done")
+    #data.setup()
+    #print("Data setup done")
 
     ###### Model
     model = Seq2Seq(cfg = cfg, num_channels=1, num_kernels=64, 
@@ -126,9 +126,9 @@ if __name__ == "__main__":
             "LOG_EVERY_N_STEPS"
         ],  
         callbacks=[lr_monitor, checkpoint],
-        strategy = DDPStrategy(find_unused_parameters=False),
+        #strategy = DDPStrategy(find_unused_parameters=False),
         #precision=16,
-        check_val_every_n_epoch=5,
+        check_val_every_n_epoch=1,
         limit_train_batches=1.0,
         limit_val_batches=1.0,
         limit_test_batches=1.0

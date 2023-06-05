@@ -34,23 +34,16 @@ class ConvLSTMCell(nn.Module):
     def forward(self, X, H_prev, C_prev):
         # Idea adapted from https://github.com/ndrplz/ConvLSTM_pytorch
         a = torch.cat([X, H_prev], dim=1)
-        assert not torch.any(torch.isnan(a))
         conv_output = self.conv(torch.cat([X, H_prev], dim=1))
-        assert not torch.any(torch.isnan(conv_output))
         # Idea adapted from https://github.com/ndrplz/ConvLSTM_pytorch
         i_conv, f_conv, C_conv, o_conv = torch.chunk(conv_output, chunks=4, dim=1)
-        assert not torch.any(torch.isnan(self.W_ci))
-        assert not torch.any(torch.isnan(torch.sigmoid(self.W_ci * C_prev)))
         input_gate = torch.sigmoid(i_conv + self.W_ci * C_prev )
-        assert not torch.any(torch.isnan(input_gate))
         forget_gate = torch.sigmoid(f_conv + self.W_cf * C_prev )
-        assert not torch.any(torch.isnan(forget_gate))
         # Current Cell output
         C = forget_gate*C_prev + input_gate * self.activation(C_conv)
         output_gate = torch.sigmoid(o_conv + self.W_co * C )
         # Current Hidden State
         H = output_gate * self.activation(C)
-        assert not torch.any(torch.isnan(H))
         return H, C
 
 class ConvLSTM(nn.Module):
@@ -67,18 +60,15 @@ class ConvLSTM(nn.Module):
         # Get the dimensions
         batch_size, seq_len,  _, height, width = X.size()
         # Initialize output
-        output = torch.zeros(batch_size, seq_len, self.out_channels, height, width)
+        output = torch.zeros(batch_size, seq_len, self.out_channels, height, width, device=X.device)
         # Initialize Hidden State
-        H = torch.zeros(batch_size, self.out_channels, 
-        height, width)
+        H = torch.zeros(batch_size, self.out_channels,height, width, device=X.device)
         # Initialize Cell Input
-        C = torch.zeros(batch_size,self.out_channels, 
-        height, width)
+        C = torch.zeros(batch_size,self.out_channels,height, width, device=X.device)
         # Unroll over time steps
         for time_step in range(seq_len):
             H, C = self.convLSTMcell(X[:,time_step,:], H, C)
             output[:,time_step,:] = H
-            assert not torch.any(torch.isnan(output))
         return output
 
 class Seq2Seq(BaseModel):
@@ -116,10 +106,8 @@ class Seq2Seq(BaseModel):
     def forward(self, X):
         # Forward propagation through all the layers
         output = self.sequential(X)
-        assert not torch.any(torch.isnan(output))
         # Return only the last output frame
         output = self.conv(output[:,-1, :]) # Using last time-step's hidden state
-        assert not torch.any(torch.isnan(output))
         return nn.Sigmoid()(output)
 
 if __name__ == "__main__":
