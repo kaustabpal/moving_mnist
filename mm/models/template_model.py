@@ -74,7 +74,7 @@ class ConvLSTM(nn.Module):
 class Seq2Seq(BaseModel):
     def __init__(self, cfg, num_channels, num_kernels, kernel_size, padding, 
     activation, frame_size, num_layers):
-        super(Seq2Seq, self).__init__()
+        super(Seq2Seq, self).__init__(cfg)
         self.cfg = cfg
         self.sequential = nn.Sequential()
         # Add First layer (Different in_channels than the rest)

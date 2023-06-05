@@ -16,7 +16,7 @@ from mm.models.loss import Loss
 class BaseModel(pl.LightningModule):
     """Pytorch Lightning base model"""
 
-    def __init__(self, cfg=None):
+    def __init__(self, cfg):
         """Init base model
 
         Args:
@@ -24,6 +24,7 @@ class BaseModel(pl.LightningModule):
         """
         super(BaseModel, self).__init__()
         self.cfg = cfg
+        self.save_hyperparameters(self.cfg)
         self.loss = Loss(self.cfg)
 
     def forward(self, x):
@@ -101,5 +102,5 @@ class BaseModel(pl.LightningModule):
 
         return loss
 
-    def test_epoch_end(self, outputs):
-        pass
+    #def on_test_epoch_end(self, outputs):
+    #    pass

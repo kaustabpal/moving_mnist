@@ -89,7 +89,7 @@ if __name__ == "__main__":
     #print("Data setup done")
 
     ###### Model
-    model = Seq2Seq(cfg = cfg, num_channels=1, num_kernels=64, 
+    model = Seq2Seq(cfg, num_channels=1, num_kernels=64, 
                     kernel_size=(3, 3), padding=(1, 1), activation="relu", 
                     frame_size=(64, 64), num_layers=1)
 
@@ -122,7 +122,7 @@ if __name__ == "__main__":
         max_epochs=cfg["TRAIN"]["MAX_EPOCH"],
         log_every_n_steps=cfg["TRAIN"][
             "LOG_EVERY_N_STEPS"
-        ],  
+        ],
         callbacks=[lr_monitor, checkpoint],
         #strategy = DDPStrategy(find_unused_parameters=False),
         precision='16-mixed',
@@ -141,7 +141,7 @@ if __name__ == "__main__":
    # )
    # checkpoint_path = cfg["LOG_DIR"] + "/checkpoints/min_val_loss.ckpt"
    # model = TCNet.load_from_checkpoint(checkpoint_path, cfg=cfg)
-   # results = trainer.test(model, data.test_dataloader())
+    trainer.test(model, data.test_dataloader(), ckpt_path='best')
 
    # if logger:
    #     filename = os.path.join(
