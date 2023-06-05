@@ -37,9 +37,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "-e",
-        "--epochs", 
-        type=int,
-        default=None,
+        "--epochs", type=int, default=None,
         help="Number of training epochs."
     )
 
@@ -48,8 +46,8 @@ if __name__ == "__main__":
     model_path = args.resume if args.resume else args.weights
     if model_path:
         ###### Load config and update parameters
-        checkpoint_path = "./src_dir/runs/" + model_path + "/checkpoints/last.ckpt"
-        config_filename = "./src_dir/runs/" + model_path + "/hparams.yaml"
+        checkpoint_path = "./mm/runs/" + model_path + "/Train/checkpoints/last.ckpt"
+        config_filename = "./mm/runs/" + model_path + "/Train/hparams.yaml"
         cfg = yaml.safe_load(open(config_filename))
 
         if args.weights and not args.comment:
@@ -57,7 +55,7 @@ if __name__ == "__main__":
 
         cfg["LOG_DIR"] = cfg["LOG_DIR"] + args.comment
         cfg["LOG_NAME"] = cfg["LOG_NAME"] + args.comment
-        print("New log name is ", cfg["LOG_DIR"])
+        print("New log dir is ", cfg["LOG_DIR"])
 
         if args.epochs:
             cfg["TRAIN"]["MAX_EPOCH"] = args.epochs
@@ -74,7 +72,7 @@ if __name__ == "__main__":
             cfg["EXPERIMENT"]["ID"] = args.comment
         cfg["LOG_NAME"] = cfg["EXPERIMENT"]["ID"] + "_" + time.strftime("%Y%m%d_%H%M%S")
         cfg["LOG_DIR"] = os.path.join(
-            "./src_dir/runs", cfg["GIT_COMMIT_VERSION"], cfg["LOG_NAME"]
+            "./mm/runs", cfg["GIT_COMMIT_VERSION"], cfg["LOG_NAME"]
         )
         if not os.path.exists(cfg["LOG_DIR"]):
             os.makedirs(cfg["LOG_DIR"])
