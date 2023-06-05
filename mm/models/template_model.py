@@ -8,54 +8,126 @@ import torch.nn as nn
 import torch.nn.functional as F
 import yaml
 import time
-from src_dir.models.base import BaseModel
+torch.manual_seed(2020701021)
+from mm.models.base import BaseModel
 
+class ConvLSTMCell(nn.Module):
+    def __init__(self, in_channels, out_channels, 
+    kernel_size, padding, activation, frame_size):
+        super(ConvLSTMCell, self).__init__()  
+        if activation == "tanh":
+            self.activation = torch.tanh 
+        elif activation == "relu":
+            self.activation = torch.relu
+        # Idea adapted from https://github.com/ndrplz/ConvLSTM_pytorch
+        self.conv = nn.Conv2d(
+            in_channels=in_channels + out_channels, 
+            out_channels=4 * out_channels, 
+            kernel_size=kernel_size, 
+            padding=padding,
+            bias = True)           
+        # Initialize weights for Hadamard Products
+        self.W_ci = nn.Parameter(torch.randn(out_channels, *frame_size))
+        self.W_co = nn.Parameter(torch.randn(out_channels, *frame_size))
+        self.W_cf = nn.Parameter(torch.randn(out_channels, *frame_size))
 
-class GenericModel(BaseModel):
-    def __init__(self, cfg):
-        """Init all layers needed for range image-based point cloud prediction"""
-        super().__init__(cfg)
+    def forward(self, X, H_prev, C_prev):
+        # Idea adapted from https://github.com/ndrplz/ConvLSTM_pytorch
+        a = torch.cat([X, H_prev], dim=1)
+        assert not torch.any(torch.isnan(a))
+        conv_output = self.conv(torch.cat([X, H_prev], dim=1))
+        assert not torch.any(torch.isnan(conv_output))
+        # Idea adapted from https://github.com/ndrplz/ConvLSTM_pytorch
+        i_conv, f_conv, C_conv, o_conv = torch.chunk(conv_output, chunks=4, dim=1)
+        assert not torch.any(torch.isnan(self.W_ci))
+        assert not torch.any(torch.isnan(torch.sigmoid(self.W_ci * C_prev)))
+        input_gate = torch.sigmoid(i_conv + self.W_ci * C_prev )
+        assert not torch.any(torch.isnan(input_gate))
+        forget_gate = torch.sigmoid(f_conv + self.W_cf * C_prev )
+        assert not torch.any(torch.isnan(forget_gate))
+        # Current Cell output
+        C = forget_gate*C_prev + input_gate * self.activation(C_conv)
+        output_gate = torch.sigmoid(o_conv + self.W_co * C )
+        # Current Hidden State
+        H = output_gate * self.activation(C)
+        assert not torch.any(torch.isnan(H))
+        return H, C
 
-    def forward(self, x):
-        """Forward range image-based point cloud prediction
+class ConvLSTM(nn.Module):
+    def __init__(self, in_channels, out_channels, 
+    kernel_size, padding, activation, frame_size):
+        super(ConvLSTM, self).__init__()
+        self.out_channels = out_channels
+        # We will unroll this over time steps
+        self.convLSTMcell = ConvLSTMCell(in_channels, out_channels, 
+        kernel_size, padding, activation, frame_size)
 
-        Args:
-            x (torch.tensor): Input tensor of concatenated, unnormalize range images
+    def forward(self, X):
+        # X is a frame sequence (batch_size, seq_len, num_channels, height, width)
+        # Get the dimensions
+        batch_size, seq_len,  _, height, width = X.size()
+        # Initialize output
+        output = torch.zeros(batch_size, seq_len, self.out_channels, height, width)
+        # Initialize Hidden State
+        H = torch.zeros(batch_size, self.out_channels, 
+        height, width)
+        # Initialize Cell Input
+        C = torch.zeros(batch_size,self.out_channels, 
+        height, width)
+        # Unroll over time steps
+        for time_step in range(seq_len):
+            H, C = self.convLSTMcell(X[:,time_step,:], H, C)
+            output[:,time_step,:] = H
+            assert not torch.any(torch.isnan(output))
+        return output
 
-        Returns:
-            dict: Containing the predicted range tensor and mask logits
-        """
-        pass
-
-
-
-class Normalization(nn.Module):
-    """Custom Normalization layer to enable different normalization strategies"""
-
-    def __init__(self, cfg, n_channels):
-        """Init custom normalization layer"""
-        super(Normalization, self).__init__()
+class Seq2Seq(BaseModel):
+    def __init__(self, cfg, num_channels, num_kernels, kernel_size, padding, 
+    activation, frame_size, num_layers):
+        super(Seq2Seq, self).__init__()
         self.cfg = cfg
-        self.norm_type = self.cfg["MODEL"]["NORM"]
-        n_channels_per_group = self.cfg["MODEL"]["N_CHANNELS_PER_GROUP"]
+        self.sequential = nn.Sequential()
+        # Add First layer (Different in_channels than the rest)
+        self.sequential.add_module(
+            "convlstm1", ConvLSTM(
+                in_channels=num_channels, out_channels=num_kernels,
+                kernel_size=kernel_size, padding=padding, 
+                activation=activation, frame_size=frame_size)
+        )
+        self.sequential.add_module(
+            "batchnorm1", nn.BatchNorm3d(num_features=10)
+        ) 
+        # Add rest of the layers
+        for l in range(2, num_layers+1):
+            self.sequential.add_module(
+                f"convlstm{l}", ConvLSTM(
+                    in_channels=num_kernels, out_channels=num_kernels,
+                    kernel_size=kernel_size, padding=padding, 
+                    activation=activation, frame_size=frame_size)
+                )
+            self.sequential.add_module(
+                f"batchnorm{l}", nn.BatchNorm3d(num_features=10)
+                ) 
+        # Add Convolutional Layer to predict output frame
+        self.conv = nn.Conv2d(
+            in_channels=num_kernels, out_channels=num_channels,
+            kernel_size=kernel_size, padding=padding)
 
-        if self.norm_type == "batch":
-            self.norm = nn.BatchNorm3d(n_channels)
-        elif self.norm_type == "instance":
-            self.norm = nn.InstanceNorm3d(n_channels)
-        elif self.norm_type == "none":
-            self.norm = nn.Identity()
+    def forward(self, X):
+        # Forward propagation through all the layers
+        output = self.sequential(X)
+        assert not torch.any(torch.isnan(output))
+        # Return only the last output frame
+        output = self.conv(output[:,-1, :]) # Using last time-step's hidden state
+        assert not torch.any(torch.isnan(output))
+        return nn.Sigmoid()(output)
 
-    def forward(self, x):
-        """Forward normalization pass
-
-        Args:
-            x (torch.tensor): Input tensor
-
-        Returns:
-            torch.tensor: Output tensor
-        """
-        x = self.norm(x)
-        return x
-
-
+if __name__ == "__main__":
+    #config_filename = # location of config file
+    #cfg = yaml.safe_load(open(config_filename))
+    model = Seq2Seq(num_channels=1, num_kernels=64, 
+                    kernel_size=(3, 3), padding=(1, 1), activation="relu", 
+                    frame_size=(64, 64), num_layers=3)
+    input = torch.randn(1,10,1,64,64)
+    output = model(input)
+    print(output.shape)

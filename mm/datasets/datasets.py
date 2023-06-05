@@ -39,7 +39,7 @@ class MovingMnistModule(pl.LightningDataModule):
 
         self.train_loader = DataLoader(
             dataset=train_set,
-            batch_size=2,
+            batch_size=16,
             shuffle=True,
             num_workers=0, 
             pin_memory=False,
@@ -119,7 +119,8 @@ class MovingMnistDataset(Dataset):
         else:
             raise Exception("Split must be train/val/test")
 
-        self.data = self.data[from_idx:to_idx]/255.
+        self.data = self.data[from_idx:to_idx]
+        assert not torch.any(torch.isnan(self.data))
         self.dataset_size = self.data.shape[0]
 
     def __len__(self):
@@ -134,7 +135,7 @@ class MovingMnistDataset(Dataset):
         Returns:
             item: Dataset dictionary item
         """
-        data = self.data[idx]
+        data = self.data[idx]/255.0
         rand = np.random.randint(10,20)
         input_data = data[:10]
         target_output = data[10:]
@@ -151,7 +152,9 @@ if __name__ == "__main__":
     train_loader = data.train_loader
     for i, batch in enumerate(train_loader):
         input_ = batch["input"]
-        target_ = batch["target_output"]
+        target_ = batch["target_output"][:,0]
+        print(target_.shape)
+        exit()
         for t in range(input_.shape[1]):
             input_img = input_[0,t,0]*255.
             plt.imshow(input_img)

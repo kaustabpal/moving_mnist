@@ -11,12 +11,12 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 import lightning.pytorch as pl
-from src_dir.models.loss import Loss
+from mm.models.loss import Loss
 
 class BaseModel(pl.LightningModule):
     """Pytorch Lightning base model"""
 
-    def __init__(self, cfg):
+    def __init__(self, cfg=None):
         """Init base model
 
         Args:
@@ -50,8 +50,10 @@ class BaseModel(pl.LightningModule):
             loss (dict): Multiple loss components
         """
         input_data = batch["input"]
-        target_output = batch["target_output"]
-        pred_output = self.forward(past)
+        target_output = batch["target_output"][:,0]
+        pred_output = self.forward(input_data)
+        assert not torch.any(torch.isnan(pred_output))
+        assert not torch.any(torch.isnan(target_output))
         loss = self.loss(target_output, pred_output)
         self.log("train/loss", loss["loss"], prog_bar=True)
         return loss
@@ -67,9 +69,9 @@ class BaseModel(pl.LightningModule):
             None
         """
         input_data = batch["input"]
-        target_output = batch["target_output"]
-        pred_output = self.forward(past)
-        loss = self.loss(target_output, pred_output,"val", self.current_epoch)
+        target_output = batch["target_output"][:,0]
+        pred_output = self.forward(input_data)
+        loss = self.loss(target_output, pred_output, "val", self.current_epoch)
 
         self.log("val/loss", loss["loss"], prog_bar=True, on_epoch=True)
 
@@ -84,12 +86,12 @@ class BaseModel(pl.LightningModule):
             loss (dict): Multiple loss components
         """
         input_data = batch["input"]
-        target_output = batch["target_output"]
+        target_output = batch["target_output"][:,0]
 
         batch_size, n_inputs, n_future_steps, H, W = input_data.shape
 
         start = time.time()
-        pred_output = self.forward(past)
+        pred_output = self.forward(input_data)
         inference_time = (time.time() - start) / batch_size
         self.log("test/inference_time", inference_time, on_epoch=True)
 

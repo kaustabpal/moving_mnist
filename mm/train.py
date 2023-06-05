@@ -13,8 +13,8 @@ from lightning.pytorch.callbacks import LearningRateMonitor, ModelCheckpoint
 from lightning.pytorch.strategies.ddp import DDPStrategy
 import subprocess
 
-from src_dir.datasets.datasets import TemplateDatasetModule
-from src_dir.models.template_model import GenericModel
+from mm.datasets.datasets import MovingMnistModule
+from mm.models.template_model import Seq2Seq
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser("./train.py")
@@ -86,12 +86,14 @@ if __name__ == "__main__":
     )
 
     ###### Dataset
-    data = TemplateDatasetModule(cfg)
+    data = MovingMnistModule()
     data.setup()
-    print("data setup done")
+    print("Data setup done")
 
     ###### Model
-    model = GenericModel(cfg)
+    model = Seq2Seq(cfg = cfg, num_channels=1, num_kernels=64, 
+                    kernel_size=(3, 3), padding=(1, 1), activation="relu", 
+                    frame_size=(64, 64), num_layers=1)
 
     ###### Load checkpoint
     if args.resume:
@@ -123,7 +125,6 @@ if __name__ == "__main__":
         log_every_n_steps=cfg["TRAIN"][
             "LOG_EVERY_N_STEPS"
         ],  
-        resume_from_checkpoint=resume_from_checkpoint,
         callbacks=[lr_monitor, checkpoint],
         strategy = DDPStrategy(find_unused_parameters=False),
         #precision=16,
@@ -134,23 +135,23 @@ if __name__ == "__main__":
     )
 
     ###### Training
-    trainer.fit(model, data)
+    trainer.fit(model, data, ckpt_path=resume_from_checkpoint)
 
     ###### Testing
-    logger = TensorBoardLogger(
-        save_dir=cfg["LOG_DIR"], default_hp_metric=False, name="test", version=""
-    )
-    checkpoint_path = cfg["LOG_DIR"] + "/checkpoints/min_val_loss.ckpt"
-    model = TCNet.load_from_checkpoint(checkpoint_path, cfg=cfg)
-    results = trainer.test(model, data.test_dataloader())
+   # logger = TensorBoardLogger(
+   #     save_dir=cfg["LOG_DIR"], default_hp_metric=False, name="test", version=""
+   # )
+   # checkpoint_path = cfg["LOG_DIR"] + "/checkpoints/min_val_loss.ckpt"
+   # model = TCNet.load_from_checkpoint(checkpoint_path, cfg=cfg)
+   # results = trainer.test(model, data.test_dataloader())
 
-    if logger:
-        filename = os.path.join(
-            cfg["LOG_DIR"], "test", "results_" + time.strftime("%Y%m%d_%H%M%S") + ".yml"
-        )
-        log_to_save = {**{"results": results}, **vars(args), **cfg}
-        with open(filename, "w") as yaml_file:
-            yaml.dump(log_to_save, yaml_file, default_flow_style=False)
+   # if logger:
+   #     filename = os.path.join(
+   #         cfg["LOG_DIR"], "test", "results_" + time.strftime("%Y%m%d_%H%M%S") + ".yml"
+   #     )
+   #     log_to_save = {**{"results": results}, **vars(args), **cfg}
+   #     with open(filename, "w") as yaml_file:
+   #         yaml.dump(log_to_save, yaml_file, default_flow_style=False)
 
 
 
