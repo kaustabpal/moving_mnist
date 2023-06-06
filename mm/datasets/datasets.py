@@ -137,8 +137,8 @@ class MovingMnistDataset(Dataset):
         """
         data = self.data[idx]/255.0
         rand = np.random.randint(10,20)
-        input_data = (data[:10]>0.5).to(torch.uint8)
-        target_output = (data[10:]>0.5).to(torch.uint8)
+        input_data = (data[:10]>0.5).to(torch.uint8).to(torch.float32)
+        target_output = (data[10:]>0.5).to(torch.uint8).to(torch.float32)
         #input_data = data[:10]
         #target_output = data[10:]
         item = {"input": input_data, "target_output": target_output, "idx": idx}
