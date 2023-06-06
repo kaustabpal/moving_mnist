@@ -58,7 +58,7 @@ class BaseModel(pl.LightningModule):
         pred_output = self.forward(input_data)
         assert not torch.any(torch.isnan(pred_output))
         assert not torch.any(torch.isnan(target_output))
-        loss = self.loss(target_output, pred_output)
+        loss = self.loss(pred_output, target_output)
         self.log("train/loss", loss["loss"], prog_bar=True)
         return loss
 
@@ -75,7 +75,7 @@ class BaseModel(pl.LightningModule):
         input_data = batch["input"]
         target_output = batch["target_output"][:,0]
         pred_output = self.forward(input_data)
-        loss = self.loss(target_output, pred_output, "val", self.current_epoch)
+        loss = self.loss(pred_output, target_output, "val", self.current_epoch)
 
         self.log("val/loss", loss["loss"], sync_dist=True, prog_bar=True, on_epoch=True)
 
