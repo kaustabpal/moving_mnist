@@ -77,7 +77,6 @@ if __name__ == "__main__":
         if not os.path.exists(cfg["LOG_DIR"]):
             os.makedirs(cfg["LOG_DIR"])
         print("Starting experiment in log dir:", cfg["LOG_DIR"])
-
     ###### Logger
     tb_logger = TensorBoardLogger(
         save_dir=cfg["LOG_DIR"], default_hp_metric=False, name="Train", version=""

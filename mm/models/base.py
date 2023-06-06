@@ -9,6 +9,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from matplotlib import pyplot as plt
 
 import lightning.pytorch as pl
 from mm.models.loss import Loss
@@ -26,6 +27,8 @@ class BaseModel(pl.LightningModule):
         self.cfg = cfg
         self.save_hyperparameters(self.cfg)
         self.loss = Loss(self.cfg)
+        self.save_dir = self.cfg["LOG_DIR"]+"/predictions/"
+        os.makedirs(self.save_dir, exist_ok=True)
 
     def forward(self, x):
         pass
@@ -74,7 +77,7 @@ class BaseModel(pl.LightningModule):
         pred_output = self.forward(input_data)
         loss = self.loss(target_output, pred_output, "val", self.current_epoch)
 
-        self.log("val/loss", loss["loss"], prog_bar=True, on_epoch=True)
+        self.log("val/loss", loss["loss"], sync_dist=True, prog_bar=True, on_epoch=True)
 
     def test_step(self, batch, batch_idx):
         """Pytorch Lightning test step including logging
@@ -98,8 +101,17 @@ class BaseModel(pl.LightningModule):
 
         loss = self.loss(pred_output, target_output, "test", self.current_epoch)
 
-        self.log("test/loss", loss["loss"], prog_bar=True, on_epoch=True)
-
+        self.log("test/loss", loss["loss"], sync_dist=True, prog_bar=True, on_epoch=True)
+        target_img = target_output[0,0].cpu()*255.
+        pred_img = pred_output[0,0].cpu()*255.
+        plt.subplot(121)
+        plt.imshow(target_img)
+        plt.title('GT')
+        plt.subplot(122)
+        plt.imshow(pred_img)
+        plt.title('Pred')
+        plt.show()
+        plt.savefig(self.save_dir+'output.png')
         return loss
 
     #def on_test_epoch_end(self, outputs):
