@@ -1,5 +1,5 @@
 EXPERIMENT:
-  ID: moving_mnist_bce # Give your experiment a unique ID which is used in the log
+  ID: moving_mnist_bce_loss # Give your experiment a unique ID which is used in the log
 
 DATA_CONFIG:
   DATASET_NAME: MovingMnist

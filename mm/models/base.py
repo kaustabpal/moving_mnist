@@ -91,6 +91,7 @@ class BaseModel(pl.LightningModule):
         """
         input_data = batch["input"]
         target_output = batch["target_output"][:,0]
+        idx = batch["idx"]
 
         batch_size, n_inputs, n_future_steps, H, W = input_data.shape
 
@@ -102,16 +103,17 @@ class BaseModel(pl.LightningModule):
         loss = self.loss(pred_output, target_output, "test", self.current_epoch)
 
         self.log("test/loss", loss["loss"], sync_dist=True, prog_bar=True, on_epoch=True)
-        target_img = target_output[0,0].cpu()*255.
-        pred_img = pred_output[0,0].cpu()*255.
-        plt.subplot(121)
-        plt.imshow(target_img)
-        plt.title('GT')
-        plt.subplot(122)
-        plt.imshow(pred_img)
-        plt.title('Pred')
-        plt.show()
-        plt.savefig(self.save_dir+'output.png')
+        for b in range(len(idx)):
+            target_img = target_output[b,0].cpu()*255.
+            pred_img = pred_output[b,0].cpu()*255.
+            plt.subplot(121)
+            plt.imshow(target_img)
+            plt.title('GT')
+            plt.subplot(122)
+            plt.imshow(pred_img)
+            plt.title('Pred')
+            plt.show()
+            plt.savefig(self.save_dir+str(idx[b])+'.png')
         return loss
 
     #def on_test_epoch_end(self, outputs):

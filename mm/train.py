@@ -114,7 +114,7 @@ if __name__ == "__main__":
     ###### Trainer
     trainer = Trainer(
         accelerator="auto",
-        devices="auto",
+        devices=1, #"auto",
         num_nodes=1,
         logger=tb_logger,
         accumulate_grad_batches=cfg["TRAIN"]["BATCH_ACC"], # times accumulate_grad_batches
