@@ -13,7 +13,7 @@ from lightning.pytorch.callbacks import LearningRateMonitor, ModelCheckpoint
 from lightning.pytorch.strategies.ddp import DDPStrategy
 import subprocess
 from mm.datasets.datasets import MovingMnistModule
-from mm.models.template_model import Seq2Seq
+from mm.models.clstm_models import Many2One
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser("./train.py")
@@ -87,7 +87,7 @@ if __name__ == "__main__":
     #print("Data setup done")
 
     ###### Model
-    model = Seq2Seq(cfg, num_channels=1, num_kernels=64, 
+    model = Many2One(cfg, num_channels=1, num_kernels=64, 
                     kernel_size=(3, 3), padding=(1, 1), activation="relu", 
                     frame_size=(64, 64), num_layers=1)
 
