@@ -6,7 +6,6 @@ import yaml
 import math
 import random
 
-
 class Loss(nn.Module):
     """Combined loss for the task"""
 
@@ -44,7 +43,7 @@ class Loss(nn.Module):
         )
 
         loss_dict = {
-            "loss": loss*100,
+            "loss": loss,
             "loss_l1": loss_l1.detach(),
             "loss_bce": loss_bce.detach(),
         }

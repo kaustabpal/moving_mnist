@@ -108,7 +108,8 @@ class Seq2Seq(BaseModel):
         output = self.sequential(X)
         # Return only the last output frame
         output = self.conv(output[:,-1, :]) # Using last time-step's hidden state
-        return nn.Sigmoid()(output)
+        #return nn.Sigmoid()(output)
+        return output
 
 if __name__ == "__main__":
     #config_filename = # location of config file

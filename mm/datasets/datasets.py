@@ -39,7 +39,7 @@ class MovingMnistModule(pl.LightningDataModule):
 
         self.train_loader = DataLoader(
             dataset=train_set,
-            batch_size=16,
+            batch_size=8,
             shuffle=True,
             num_workers=0, 
             pin_memory=False,
@@ -51,7 +51,7 @@ class MovingMnistModule(pl.LightningDataModule):
 
         self.valid_loader = DataLoader(
             dataset=val_set,
-            batch_size=16,
+            batch_size=8,
             shuffle=False,
             num_workers=0,
             pin_memory=False,
@@ -119,7 +119,7 @@ class MovingMnistDataset(Dataset):
         else:
             raise Exception("Split must be train/val/test")
 
-        self.data = self.data[from_idx:to_idx]
+        self.data = self.data[from_idx:to_idx]/255.0
         assert not torch.any(torch.isnan(self.data))
         self.dataset_size = self.data.shape[0]
 
@@ -135,12 +135,12 @@ class MovingMnistDataset(Dataset):
         Returns:
             item: Dataset dictionary item
         """
-        data = self.data[idx]/255.0
-        rand = np.random.randint(10,20)
-        input_data = (data[:10]>0.5).to(torch.uint8).to(torch.float32)
-        target_output = (data[10:]>0.5).to(torch.uint8).to(torch.float32)
+        data = self.data[idx]
+        #rand = np.random.randint(10,20)
         #input_data = data[:10]
-        #target_output = data[10:]
+        #target_output = (data[10:]>0.5).to(torch.uint8).to(torch.float32)
+        input_data = data[:10]
+        target_output = data[10:]
         item = {"input": input_data, "target_output": target_output, "idx": idx}
         return item
 

@@ -12,7 +12,6 @@ from lightning.pytorch.loggers import TensorBoardLogger
 from lightning.pytorch.callbacks import LearningRateMonitor, ModelCheckpoint
 from lightning.pytorch.strategies.ddp import DDPStrategy
 import subprocess
-
 from mm.datasets.datasets import MovingMnistModule
 from mm.models.template_model import Seq2Seq
 
@@ -133,6 +132,10 @@ if __name__ == "__main__":
 
     ###### Training
     trainer.fit(model, data, ckpt_path=resume_from_checkpoint)
+    print("Finished Training> Starting Test.")
+    #trainer.test(ckpt_path="best")
+    checkpoint_path = cfg["LOG_DIR"] + "/checkpoints/min_val_loss.ckpt"
+    trainer.test(model, data.test_dataloader(), ckpt_path=checkpoint_path)
 
     ###### Testing
    # logger = TensorBoardLogger(
@@ -140,7 +143,7 @@ if __name__ == "__main__":
    # )
    # checkpoint_path = cfg["LOG_DIR"] + "/checkpoints/min_val_loss.ckpt"
    # model = TCNet.load_from_checkpoint(checkpoint_path, cfg=cfg)
-    trainer.test(model, data.test_dataloader(), ckpt_path='best')
+    #trainer.test(model, data.test_dataloader(), ckpt_path='best')
 
    # if logger:
    #     filename = os.path.join(

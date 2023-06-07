@@ -10,7 +10,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from matplotlib import pyplot as plt
-
 import lightning.pytorch as pl
 from mm.models.loss import Loss
 
@@ -113,7 +112,7 @@ class BaseModel(pl.LightningModule):
             plt.imshow(pred_img)
             plt.title('Pred')
             plt.show()
-            plt.savefig(self.save_dir+str(idx[b])+'.png')
+            plt.savefig(self.save_dir+str(idx[b].cpu())+'.png')
         return loss
 
     #def on_test_epoch_end(self, outputs):

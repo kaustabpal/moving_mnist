@@ -11,37 +11,14 @@ MODEL:
   N_PAST_STEPS: 5 # Number of input range images
   N_FUTURE_STEPS: 1 # Number of predicted future range images
   MASK_THRESHOLD: 0.5 # Threshold for valid point mask classification
-  USE:
-    XYZ: False # If true: x,y, and z coordinates will be used as additional input channels
-    INTENSITY: False # If true: intensity will be used as additional input channel
-  CHANNELS: # Number of channels in encoder and decoder, respectively.
-    - 16
-    - 32
-    - 64
-    - 128
-    - 256
-    - 512
-  SKIP_IF_CHANNEL_SIZE: # Adds a skip connection between encoder and decoder at desired channels
-    - 32
-    - 64
-    - 128
-    - 256
-  TEMPORAL_KERNEL_SIZE: # Kernel size along temporal dimension. '2' reduces the size of the temporal dimension by 1, '1' keeps the size.
-    - 2
-    - 2
-    - 2
-    - 2
-    - 1
-  CIRCULAR_PADDING: True
   NORM: batch # batch, group, none, instance
-  N_CHANNELS_PER_GROUP: 16
 
 TRAIN:
-  LR: 0.0001
+  LR: 0.001
   LR_EPOCH: 1
   LR_DECAY: 0.99
-  MAX_EPOCH: 30
-  BATCH_SIZE: 16
+  MAX_EPOCH: 50
+  BATCH_SIZE: 8
   BATCH_ACC: 4
   N_GPUS: 2
   LOG_EVERY_N_STEPS: 10
@@ -49,15 +26,3 @@ TRAIN:
   LOSS_WEIGHT_RANGE_VIEW: 1.0
   LOSS_WEIGHT_MASK: 1.0
 
-VALIDATION:
-  SELECTED_SEQUENCE_AND_FRAME: # Only log point clouds for selected validation sequence and frame
-    6:
-      - 4
-      - 10
-
-TEST:
-  N_BATCHES_TO_SAVE: -1 # If set to -1 and SAVE_POINT_CLOUDS is true, all batches of the test set will be saved.
-  SAVE_POINT_CLOUDS: True
-  N_DOWNSAMPLED_POINTS_CD: -1 # Can evaluate the CD on downsampled point clouds. Set -1 to evaluate on full point clouds.
-  USE_OBJECT_MASK: True
-  USE_GROUND_MASK: False
