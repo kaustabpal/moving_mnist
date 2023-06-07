@@ -26,8 +26,8 @@ class BaseModel(pl.LightningModule):
         self.cfg = cfg
         self.save_hyperparameters(self.cfg)
         self.loss = Loss(self.cfg)
-        self.save_dir = self.cfg["LOG_DIR"]+"/predictions/"
-        os.makedirs(self.save_dir, exist_ok=True)
+        #self.save_dir = self.cfg["LOG_DIR"]+"/predictions/"
+        #os.makedirs(self.save_dir, exist_ok=True)
 
     def forward(self, x):
         pass
