@@ -10,7 +10,7 @@ import lightning.pytorch as pl
 from lightning.pytorch import Trainer
 from lightning.pytorch.loggers import TensorBoardLogger
 from lightning.pytorch.callbacks import LearningRateMonitor, ModelCheckpoint
-from pytorch_lightning.callbacks.early_stopping import EarlyStopping
+from lightning.pytorch.callbacks.early_stopping import EarlyStopping
 from lightning.pytorch.strategies.ddp import DDPStrategy
 import torch
 import subprocess

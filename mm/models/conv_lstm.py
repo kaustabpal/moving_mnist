@@ -13,10 +13,10 @@ class ConvLSTMCell(nn.Module):
     def __init__(self, input_dim, hidden_dim, kernel_size, padding,
             activation, frame_size):
         super(ConvLSTMCell, self).__init__()
-        if activation == "tanh":
-            self.activation = torch.tanh 
-        elif activation == "relu":
-            self.activation = torch.relu
+        #if activation == "tanh":
+        #    self.activation = torch.tanh 
+        #elif activation == "relu":
+        #    self.activation = torch.relu
         self.activation = nn.ReLU6()
         self.input_dim = input_dim
         self.hidden_dim = hidden_dim

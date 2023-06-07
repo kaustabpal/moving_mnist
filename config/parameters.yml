@@ -1,5 +1,5 @@
 EXPERIMENT:
-  ID: moving_mnist_bce_loss # Give your experiment a unique ID which is used in the log
+  ID: moving_mnist_3_l1_loss # Give your experiment a unique ID which is used in the log
 
 DATA_CONFIG:
   DATASET_NAME: MovingMnist
@@ -14,10 +14,10 @@ MODEL:
   NORM: batch # batch, group, none, instance
 
 TRAIN:
-  LR: 0.001
+  LR: 0.0001
   LR_EPOCH: 1
   LR_DECAY: 0.99
-  MAX_EPOCH: 50
+  MAX_EPOCH: 30
   BATCH_SIZE: 8
   BATCH_ACC: 4
   N_GPUS: 2

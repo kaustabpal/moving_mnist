@@ -53,7 +53,7 @@ class Many2One(BaseModel):
         pred_frame = self.conv(context_map) # Using last time-step's hidden state
         assert not torch.any(torch.isnan(pred_frame))
         #return nn.Sigmoid()(output)
-        return pred_frame
+        return nn.Sigmoid()(pred_frame)
 
 #class One2Many(BaseModel):
 #    def __init__(self, cfg, num_channels, num_kernels, kernel_size, padding, 
