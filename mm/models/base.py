@@ -26,8 +26,8 @@ class BaseModel(pl.LightningModule):
         self.cfg = cfg
         self.save_hyperparameters(self.cfg)
         self.loss = Loss(self.cfg)
-        #self.save_dir = self.cfg["LOG_DIR"]+"/predictions/"
-        #os.makedirs(self.save_dir, exist_ok=True)
+        self.save_dir = self.cfg["LOG_DIR"]+"/predictions/"
+        os.makedirs(self.save_dir, exist_ok=True)
 
     def forward(self, x):
         pass
@@ -112,7 +112,7 @@ class BaseModel(pl.LightningModule):
             plt.imshow(pred_img)
             plt.title('Pred')
             plt.show()
-            plt.savefig(self.save_dir+str(idx[b].cpu())+'.png')
+            plt.savefig(self.save_dir+str(idx[b].cpu().numpy())+'.png')
         return loss
 
     #def on_test_epoch_end(self, outputs):

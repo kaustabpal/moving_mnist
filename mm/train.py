@@ -10,7 +10,9 @@ import lightning.pytorch as pl
 from lightning.pytorch import Trainer
 from lightning.pytorch.loggers import TensorBoardLogger
 from lightning.pytorch.callbacks import LearningRateMonitor, ModelCheckpoint
+from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from lightning.pytorch.strategies.ddp import DDPStrategy
+import torch
 import subprocess
 from mm.datasets.datasets import MovingMnistModule
 from mm.models.clstm_models import Many2One
@@ -88,7 +90,7 @@ if __name__ == "__main__":
 
     ###### Model
     model = Many2One(cfg, num_channels=1, num_kernels=64, 
-                    kernel_size=(3, 3), padding=(1, 1), activation="relu", 
+                    kernel_size=(3, 3), padding=(1, 1), activation="tanh", 
                     frame_size=(64, 64), num_layers=1)
 
     ###### Load checkpoint
@@ -109,6 +111,8 @@ if __name__ == "__main__":
         mode="min",
         save_last=True,
     )
+    early_stop = EarlyStopping(monitor="val/loss", mode="min",
+            verbose=True, patience=5)
 
     ###### Trainer
     trainer = Trainer(
@@ -121,7 +125,7 @@ if __name__ == "__main__":
         log_every_n_steps=cfg["TRAIN"][
             "LOG_EVERY_N_STEPS"
         ],
-        callbacks=[lr_monitor, checkpoint],
+        callbacks=[lr_monitor, checkpoint, early_stop],
         #strategy = DDPStrategy(find_unused_parameters=False),
         precision='16-mixed',
         check_val_every_n_epoch=1,
