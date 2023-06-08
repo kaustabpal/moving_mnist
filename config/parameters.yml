@@ -1,5 +1,5 @@
 EXPERIMENT:
-  ID: moving_mnist_3_l1_loss # Give your experiment a unique ID which is used in the log
+  ID: mmnist_peep # Give your experiment a unique ID which is used in the log
 
 DATA_CONFIG:
   DATASET_NAME: MovingMnist
@@ -16,10 +16,10 @@ MODEL:
 TRAIN:
   LR: 0.0001
   LR_EPOCH: 1
-  LR_DECAY: 0.99
-  MAX_EPOCH: 30
-  BATCH_SIZE: 8
-  BATCH_ACC: 4
+  LR_DECAY: 0.33
+  MAX_EPOCH: 20
+  BATCH_SIZE: 16
+  BATCH_ACC: 1
   N_GPUS: 2
   LOG_EVERY_N_STEPS: 10
   LOSS_WEIGHT_CHAMFER_DISTANCE: 0.0

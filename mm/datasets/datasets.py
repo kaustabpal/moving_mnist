@@ -39,7 +39,7 @@ class MovingMnistModule(pl.LightningDataModule):
 
         self.train_loader = DataLoader(
             dataset=train_set,
-            batch_size=8,
+            batch_size=16,
             shuffle=True,
             num_workers=0, 
             pin_memory=False,
@@ -51,7 +51,7 @@ class MovingMnistModule(pl.LightningDataModule):
 
         self.valid_loader = DataLoader(
             dataset=val_set,
-            batch_size=8,
+            batch_size=16,
             shuffle=False,
             num_workers=0,
             pin_memory=False,

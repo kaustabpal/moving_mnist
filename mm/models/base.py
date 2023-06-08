@@ -9,6 +9,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from lion_pytorch import Lion
 from matplotlib import pyplot as plt
 import lightning.pytorch as pl
 from mm.models.loss import Loss
@@ -34,13 +35,17 @@ class BaseModel(pl.LightningModule):
 
     def configure_optimizers(self):
         """Optimizers"""
-        optimizer = torch.optim.Adam(self.parameters(), lr=self.cfg["TRAIN"]["LR"])
-        scheduler = torch.optim.lr_scheduler.StepLR(
-            optimizer,
-            step_size=self.cfg["TRAIN"]["LR_EPOCH"],
-            gamma=self.cfg["TRAIN"]["LR_DECAY"],
-        )
-        return [optimizer], [scheduler]
+        #optimizer = torch.optim.Adam(self.parameters(), lr=self.cfg["TRAIN"]["LR"])
+        optimizer = Lion(self.parameters(), lr=self.cfg["TRAIN"]["LR"],
+                weight_decay=1e-2)
+        #scheduler = torch.optim.lr_scheduler.StepLR(
+        #    optimizer,
+        #    step_size=self.cfg["TRAIN"]["LR_EPOCH"],
+        #    gamma=self.cfg["TRAIN"]["LR_DECAY"],
+        #)
+        #scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+        #        optimizer, 20, eta_min=1e-6, verbose=False)
+        return [optimizer]#, [scheduler]
 
     def training_step(self, batch, batch_idx):
         """Pytorch Lightning training step including logging
@@ -57,8 +62,8 @@ class BaseModel(pl.LightningModule):
         pred_output = self.forward(input_data)
         assert not torch.any(torch.isnan(pred_output))
         assert not torch.any(torch.isnan(target_output))
-        loss = self.loss(pred_output, target_output)
-        self.log("train/loss", loss["loss"], prog_bar=True)
+        loss = self.loss(pred_output.flatten(), target_output.flatten())
+        self.log("train/loss", loss["loss"], prog_bar=True, on_epoch=True)
         return loss
 
     def validation_step(self, batch, batch_idx):
@@ -74,7 +79,7 @@ class BaseModel(pl.LightningModule):
         input_data = batch["input"]
         target_output = batch["target_output"][:,0]
         pred_output = self.forward(input_data)
-        loss = self.loss(pred_output, target_output, "val", self.current_epoch)
+        loss = self.loss(pred_output.flatten(), target_output.flatten(), "val", self.current_epoch)
 
         self.log("val/loss", loss["loss"], sync_dist=True, prog_bar=True, on_epoch=True)
 
@@ -104,7 +109,7 @@ class BaseModel(pl.LightningModule):
         self.log("test/loss", loss["loss"], sync_dist=True, prog_bar=True, on_epoch=True)
         for b in range(len(idx)):
             target_img = target_output[b,0].cpu()*255.
-            pred_img = pred_output[b,0].cpu()*255.
+            pred_img = nn.Sigmoid()(pred_output[b,0]).cpu()*255.
             plt.subplot(121)
             plt.imshow(target_img)
             plt.title('GT')

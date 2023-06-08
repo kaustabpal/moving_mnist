@@ -24,7 +24,7 @@ class Many2One(BaseModel):
                 activation=activation, frame_size=frame_size,
                 num_layers=num_layers, return_all_layers=True
                 )
-        #self.norm = nn.BatchNorm3d(num_features=10)
+        self.norm = nn.BatchNorm3d(num_features=10)
 
         # Add Convolutional Layer to predict output frame
         self.conv = nn.Conv2d(
@@ -34,6 +34,8 @@ class Many2One(BaseModel):
     def forward(self, X):
         # X is of shape [batch, seq_length, num_channels, height, width]
         output, h = self.convLSTM(X)
+        output = output[-1]
+        output = self.norm(output)
         '''
         output is a list of length num_layers
         output[i] contains the outputs of all the input seq for the i-th layer
@@ -44,16 +46,18 @@ class Many2One(BaseModel):
         h[i] containts the final time-step's hidden and cell state. 
         h[i][0] contains the hidden state
         h[i][1] contains the cell state
-        The hidden and the cell states are of shape [b,num_kernels, *frame_size]
+        The hidden and the cell states are of shape [b,num_kernels,*frame_size]
         '''
-        context_map = h[-1][0] # final layer's hidden state
-        assert not torch.any(torch.isnan(context_map))
+        #context_map = h[-1][0] # final layer's hidden state
+        #assert not torch.any(torch.isnan(context_map))
+        #context_map = self.norm(context_map)
+        #context_map = torch.relu(context_map)
+        context_map = output[:,-1] # final layer's hidden state
 
         # Return only the last output frame
         pred_frame = self.conv(context_map) # Using last time-step's hidden state
         assert not torch.any(torch.isnan(pred_frame))
-        #return nn.Sigmoid()(output)
-        return nn.Sigmoid()(pred_frame)
+        return pred_frame
 
 #class One2Many(BaseModel):
 #    def __init__(self, cfg, num_channels, num_kernels, kernel_size, padding, 

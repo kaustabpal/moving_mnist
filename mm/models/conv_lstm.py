@@ -10,50 +10,71 @@ import time
 torch.manual_seed(2020701021)
 
 class ConvLSTMCell(nn.Module):
+    '''
+    Peephole-Conv-LSTM cell implementation
+    Peephole-LSTM paper: https://www.jmlr.org/papers/volume3/gers02a/gers02a.pdf
+    Conv-LSTM paper: https://arxiv.org/pdf/1506.04214.pdf
+    '''
     def __init__(self, input_dim, hidden_dim, kernel_size, padding,
-            activation, frame_size):
+            activation, frame_size, peep=True):
         super(ConvLSTMCell, self).__init__()
-        #if activation == "tanh":
-        #    self.activation = torch.tanh 
-        #elif activation == "relu":
-        #    self.activation = torch.relu
-        self.activation = nn.ReLU6()
+
+        if activation == "tanh":
+            self.activation = torch.tanh 
+        elif activation == "relu":
+            # Using ReLU6 as ReLU as exploding grradient problems
+            self.activation = nn.ReLU6() 
+
         self.input_dim = input_dim
         self.hidden_dim = hidden_dim
         self.padding = kernel_size[0] // 2, kernel_size[1] // 2
+        self.peep = peep
+
         # Idea adapted from https://github.com/ndrplz/ConvLSTM_pytorch
         self.conv = nn.Conv2d(
             in_channels=input_dim + hidden_dim,
             out_channels=4 * hidden_dim, kernel_size=kernel_size,
             padding=self.padding, bias = True
             )
-        # Initialize weights for Hadamard Products
-        self.W_ci = nn.Parameter(torch.randn(hidden_dim, *frame_size))
-        self.W_co = nn.Parameter(torch.randn(hidden_dim, *frame_size))
-        self.W_cf = nn.Parameter(torch.randn(hidden_dim, *frame_size))
+        if(self.peep == True):
+            # Init weights for Peep-hole connections to previous cell state
+            self.W_ci = nn.Parameter(torch.randn(hidden_dim, *frame_size))
+            self.W_co = nn.Parameter(torch.randn(hidden_dim, *frame_size))
+            self.W_cf = nn.Parameter(torch.randn(hidden_dim, *frame_size))
 
     def forward(self, input_tensor, cur_state): 
         h_cur, c_cur = cur_state
-        # Idea adapted from https://github.com/ndrplz/ConvLSTM_pytorch
         combined = torch.cat([input_tensor, h_cur], dim=1)
         assert not torch.any(torch.isnan(combined))
+
         combined_conv = self.conv(combined)
         assert not torch.any(torch.isnan(combined_conv))
 
         i_conv, f_conv, c_conv, o_conv =\
                 torch.chunk(combined_conv, chunks=4, dim=1)
-        input_gate = torch.sigmoid(i_conv + self.W_ci * c_cur )
-        assert not torch.any(torch.isnan(input_gate))
-        forget_gate = torch.sigmoid(f_conv + self.W_cf * c_cur )
-        assert not torch.any(torch.isnan(forget_gate))
-        # Current Cell output
-        c_next = forget_gate*c_cur + i_conv * self.activation(c_conv)
-        assert not torch.any(torch.isnan(c_next))
-        output_gate = torch.sigmoid(o_conv + self.W_co * c_next )
-        assert not torch.any(torch.isnan(output_gate))
+
+        if(self.peep == True):
+            input_gate = torch.sigmoid(i_conv + self.W_ci * c_cur )
+            forget_gate = torch.sigmoid(f_conv + self.W_cf * c_cur )
+            # Current Cell output
+            c_next = forget_gate*c_cur + input_gate * self.activation(c_conv)
+            output_gate = torch.sigmoid(o_conv + self.W_co * c_next )
+        else:
+            input_gate = torch.sigmoid(i_conv)
+            forget_gate = torch.sigmoid(f_conv)
+            # Current Cell output
+            c_next = forget_gate*c_cur + input_gate * self.activation(c_conv)
+            output_gate = torch.sigmoid(o_conv)
+
         # Current Hidden State
         h_next = output_gate * self.activation(c_next)
+
+        assert not torch.any(torch.isnan(input_gate))
+        assert not torch.any(torch.isnan(forget_gate))
+        assert not torch.any(torch.isnan(c_next))
+        assert not torch.any(torch.isnan(output_gate))
         assert not torch.any(torch.isnan(h_next))
+
         return h_next, c_next
 
     def init_hidden(self, batch_size, image_size):
@@ -94,9 +115,12 @@ class ConvLSTM(nn.Module):
                                           kernel_size=self.kernel_size[i],
                                           padding=self.padding[i],
                                           activation=activation,
-                                          frame_size=self.frame_size[i]))
+                                          frame_size=self.frame_size[i],
+                                          peep=True))
+
         self.cell_list = nn.ModuleList(cell_list)
         self.norm = nn.BatchNorm2d(num_features=64)
+        self.dropout = nn.Dropout(p=0.2)
 
     def forward(self, input_tensor, hidden_state=None):
         # X is a frame sequence (batch_size, seq_len, num_channels, height, width)
@@ -117,7 +141,7 @@ class ConvLSTM(nn.Module):
             output_inner = []
             for t in range(seq_len):
                 h, c = self.cell_list[layer_idx](
-                    input_tensor = cur_layer_input[:, t, :, :, :],\
+                    input_tensor = self.dropout(cur_layer_input[:, t, :, :, :]),\
                             cur_state=[h, c])
                 #h = self.norm(h)
                 #c = self.norm(c)
@@ -128,11 +152,6 @@ class ConvLSTM(nn.Module):
 
             layer_output_list.append(layer_output)
             last_state_list.append([h, c])
-        #print(len(layer_output_list))
-        #print(len(last_state_list))
-        #print(layer_output_list[-1].shape)
-        #print(last_state_list[-1][0].shape)
-        #exit()
 
         if not self.return_all_layers:
             layer_output_list = layer_output_list[-1]

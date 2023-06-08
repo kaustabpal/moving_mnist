@@ -16,6 +16,7 @@ import torch
 import subprocess
 from mm.datasets.datasets import MovingMnistModule
 from mm.models.clstm_models import Many2One
+from mm.models.seq2seq import Seq2Seq
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser("./train.py")
@@ -90,8 +91,11 @@ if __name__ == "__main__":
 
     ###### Model
     model = Many2One(cfg, num_channels=1, num_kernels=64, 
-                    kernel_size=(3, 3), padding=(1, 1), activation="tanh", 
-                    frame_size=(64, 64), num_layers=1)
+                    kernel_size=(3, 3), padding=(1, 1), activation="tanh",
+                    frame_size=(64, 64), num_layers=3)
+    #model = Seq2Seq(cfg, num_channels=1, num_kernels=64,
+    #        kernel_size=(3, 3), padding=(1, 1), activation="tanh",
+    #        frame_size=(64, 64), num_layers=3)
 
     ###### Load checkpoint
     if args.resume:
@@ -112,7 +116,7 @@ if __name__ == "__main__":
         save_last=True,
     )
     early_stop = EarlyStopping(monitor="val/loss", mode="min",
-            verbose=True, patience=5)
+            verbose=True, patience=10)
 
     ###### Trainer
     trainer = Trainer(
@@ -122,16 +126,14 @@ if __name__ == "__main__":
         logger=tb_logger,
         accumulate_grad_batches=cfg["TRAIN"]["BATCH_ACC"], # times accumulate_grad_batches
         max_epochs=cfg["TRAIN"]["MAX_EPOCH"],
-        log_every_n_steps=cfg["TRAIN"][
-            "LOG_EVERY_N_STEPS"
-        ],
+        log_every_n_steps=cfg["TRAIN"]["LOG_EVERY_N_STEPS"],
         callbacks=[lr_monitor, checkpoint, early_stop],
         #strategy = DDPStrategy(find_unused_parameters=False),
         precision='16-mixed',
         check_val_every_n_epoch=1,
         limit_train_batches=1.0,
         limit_val_batches=1.0,
-        limit_test_batches=1.0
+        limit_test_batches=10
     )
 
     ###### Training
