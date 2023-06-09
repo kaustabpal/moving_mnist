@@ -1,4 +1,4 @@
-# Pytorch Lightning Template Repo
+# Video frame prediction experiments with Moving MNIST dataset
 
 ```
 mkdir data
@@ -6,10 +6,13 @@ cd data
 wget https://www.cs.toronto.edu/~nitish/unsupervised_video/mnist_test_seq.npy
 export DATA_RAW=/Users/kaustabpal/work/moving_mnist/data/mnist_test_seq.npy
 ```
-# Conv-LSTM
+# Approach: Conv-LSTM
 Conv-LSTM with peep and without peep connection has been implemented.
 
 ## Many to One
+
+Here we are taking past 10 sequences as input and predicting only one timestep into the future.
+
 ### With Binary Cross Entropy Loss
 **Prediction**
 
