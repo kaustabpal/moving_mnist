@@ -13,10 +13,12 @@ Conv-LSTM with peep and without peep connection has been implemented.
 ### With Binary Cross Entropy Loss
 **Prediction**
 
-![Many to One prediction](img/conv_lstm_m2o_pred.jpg)
+<img src="img/conv_lstm_m2o_pred.jpg" alt="Many to One prediction" width="700"/>
+<!-- ![Many to One prediction](img/conv_lstm_m2o_pred.jpg) -->
 
 **Loss curve**
-<img src="img/conv_lstm_val_loss.png" alt="Many to One loss curve" width="75"/>
+
+<img src="img/conv_lstm_val_loss.png" alt="Many to One loss curve" width="700"/>
 <!-- ![Many to One loss curve](img/conv_lstm_val_loss.png) -->
 
 
