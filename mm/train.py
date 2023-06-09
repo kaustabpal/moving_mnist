@@ -7,7 +7,7 @@ import time
 import argparse
 import yaml
 import lightning.pytorch as pl
-from lightning.pytorch import Trainer
+from lightning.pytorch import Trainer, seed_everything
 from lightning.pytorch.loggers import TensorBoardLogger
 from lightning.pytorch.callbacks import LearningRateMonitor, ModelCheckpoint
 from lightning.pytorch.callbacks.early_stopping import EarlyStopping
@@ -90,9 +90,10 @@ if __name__ == "__main__":
     #print("Data setup done")
 
     ###### Model
+    seed_everything(cfg["EXPERIMENT"]["SEED"], workers=True)
     model = Many2One(cfg, num_channels=1, num_kernels=64, 
                     kernel_size=(3, 3), padding=(1, 1), activation="tanh",
-                    frame_size=(64, 64), num_layers=3)
+                    frame_size=(64, 64), num_layers=3, peep=cfg["MODEL"]["PEEP"])
     #model = Seq2Seq(cfg, num_channels=1, num_kernels=64,
     #        kernel_size=(3, 3), padding=(1, 1), activation="tanh",
     #        frame_size=(64, 64), num_layers=3)

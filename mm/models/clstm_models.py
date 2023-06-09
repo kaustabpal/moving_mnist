@@ -7,13 +7,12 @@ import torch.nn as nn
 import torch.nn.functional as F
 import yaml
 import time
-torch.manual_seed(2020701021)
 from mm.models.base import BaseModel
 from mm.models.conv_lstm import ConvLSTM
 
 class Many2One(BaseModel):
     def __init__(self, cfg, num_channels, num_kernels, kernel_size, padding, 
-    activation, frame_size, num_layers):
+    activation, frame_size, num_layers, peep=True):
         super(Many2One, self).__init__(cfg)
         self.cfg = cfg
         self.encoder = nn.ModuleList()
@@ -22,7 +21,7 @@ class Many2One(BaseModel):
                 input_dim=num_channels, hidden_dim=num_kernels,
                 kernel_size=kernel_size, padding=padding, 
                 activation=activation, frame_size=frame_size,
-                num_layers=num_layers, return_all_layers=True
+                num_layers=num_layers, peep=peep, return_all_layers=True
                 )
         self.norm = nn.BatchNorm3d(num_features=10)
 

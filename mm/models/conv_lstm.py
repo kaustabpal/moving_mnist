@@ -84,7 +84,8 @@ class ConvLSTMCell(nn.Module):
 
 class ConvLSTM(nn.Module):
     def __init__(self, input_dim, hidden_dim, kernel_size, padding,
-            activation, frame_size, num_layers=1, return_all_layers=False):
+            activation, frame_size, num_layers=1,
+            peep=True, return_all_layers=False):
         super(ConvLSTM, self).__init__()
 
         self._check_kernel_size_consistency(kernel_size)
@@ -104,6 +105,7 @@ class ConvLSTM(nn.Module):
         self.frame_size = frame_size
         self.num_layers = num_layers
         self.return_all_layers = return_all_layers
+        self.peep = peep
 
         cell_list = []
         for i in range(0, self.num_layers):
@@ -116,7 +118,7 @@ class ConvLSTM(nn.Module):
                                           padding=self.padding[i],
                                           activation=activation,
                                           frame_size=self.frame_size[i],
-                                          peep=True))
+                                          peep=self.peep))
 
         self.cell_list = nn.ModuleList(cell_list)
         self.norm = nn.BatchNorm2d(num_features=64)
