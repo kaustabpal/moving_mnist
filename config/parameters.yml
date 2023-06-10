@@ -1,6 +1,6 @@
 EXPERIMENT:
-  ID: mmnist_wo_peep_seed_121 # Give your experiment a unique ID which is used in the log
-  SEED: 121
+  ID: peep_l1_1 # Give your experiment a unique ID which is used in the log
+  SEED: 2
 
 DATA_CONFIG:
   DATASET_NAME: MovingMnist
@@ -9,7 +9,7 @@ DATA_CONFIG:
     SHUFFLE: True
 
 MODEL:
-  PEEP: False
+  PEEP: True
   N_PAST_STEPS: 5 # Number of input range images
   N_FUTURE_STEPS: 1 # Number of predicted future range images
   MASK_THRESHOLD: 0.5 # Threshold for valid point mask classification
@@ -22,7 +22,7 @@ TRAIN:
   MAX_EPOCH: 20
   BATCH_SIZE: 16
   BATCH_ACC: 1
-  N_GPUS: 2
+  N_GPUS: 1
   LOG_EVERY_N_STEPS: 10
   LOSS_WEIGHT_CHAMFER_DISTANCE: 0.0
   LOSS_WEIGHT_RANGE_VIEW: 1.0

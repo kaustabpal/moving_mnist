@@ -16,8 +16,8 @@ class Loss(nn.Module):
 
         self.loss_l1 = loss_l1(self.cfg)
         self.loss_bce = loss_bce(self.cfg)
-        self.loss_weight_l1 = 0
-        self.loss_weight_bce = 1
+        self.loss_weight_l1 = 1
+        self.loss_weight_bce = 0
 
     def forward(self, output, target, mode="train", epoch_number=40):
         """Forward pass with multiple loss components
@@ -70,8 +70,9 @@ class loss_l1(nn.Module):
     def __init__(self, cfg):
         super().__init__()
         self.cfg = cfg
-        self.loss = nn.L1Loss(reduction="mean")
+        self.loss = nn.L1Loss(reduction="sum")
+        self.sigmoid = nn.Sigmoid()
 
     def forward(self, output, target, epoch_number):
-        loss = self.loss(output, target)
+        loss = self.loss(self.sigmoid(output), target)
         return loss
