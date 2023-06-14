@@ -145,8 +145,6 @@ class ConvLSTM(nn.Module):
                 h, c = self.cell_list[layer_idx](
                     input_tensor = self.dropout(cur_layer_input[:, t, :, :, :]),\
                             cur_state=[h, c])
-                #h = self.norm(h)
-                #c = self.norm(c)
                 output_inner.append(h)
 
             layer_output = torch.stack(output_inner, dim=1)

@@ -29,6 +29,7 @@ class BaseModel(pl.LightningModule):
         self.loss = Loss(self.cfg)
         self.save_dir = self.cfg["LOG_DIR"]+"/predictions/"
         os.makedirs(self.save_dir, exist_ok=True)
+        self.teacher_forcing_ratio = 0.99
 
     def forward(self, x):
         pass
@@ -44,8 +45,20 @@ class BaseModel(pl.LightningModule):
         #    gamma=self.cfg["TRAIN"]["LR_DECAY"],
         #)
         #scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
-        #        optimizer, 20, eta_min=1e-6, verbose=False)
-        return [optimizer]#, [scheduler]
+        #        optimizer, 49, eta_min=1e-5, verbose=False)
+        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+                optimizer, factor=0.5, patience=2, verbose=True)
+        #return [optimizer]#, [scheduler]
+        return {
+            "optimizer": optimizer,
+            "lr_scheduler": {
+                "scheduler": scheduler,
+                "monitor": "val/loss",
+                "frequency": 1, #"indicates how often the metric is updated"
+                # If "monitor" references validation metrics, then "frequency" should be set to a
+                # multiple of "trainer.check_val_every_n_epoch".
+            },
+        }
 
     def training_step(self, batch, batch_idx):
         """Pytorch Lightning training step including logging
@@ -57,14 +70,20 @@ class BaseModel(pl.LightningModule):
         Returns:
             loss (dict): Multiple loss components
         """
+        fut_seq = self.cfg["MODEL"]["N_FUTURE_STEPS"]
         input_data = batch["input"]
-        target_output = batch["target_output"][:,0]
-        pred_output = self.forward(input_data)
+        target_output = batch["target_output"][:,:fut_seq]
+        pred_output = self.forward(input_data, target_output,
+                self.teacher_forcing_ratio)
         assert not torch.any(torch.isnan(pred_output))
         assert not torch.any(torch.isnan(target_output))
-        loss = self.loss(pred_output.flatten(), target_output.flatten())
-        self.log("train/loss", loss["loss"], prog_bar=True, on_epoch=True)
+        loss = self.loss(pred_output, target_output, target_output.shape[0])
+        self.log("train/loss", loss["loss"], sync_dist=True,
+                prog_bar=True, on_epoch=True)
         return loss
+
+    def on_train_epoch_end(self, outputs):
+        self.teacher_forcing_ratio = self.teacher_forcing_ratio/1.1
 
     def validation_step(self, batch, batch_idx):
         """Pytorch Lightning validation step including logging
@@ -76,10 +95,13 @@ class BaseModel(pl.LightningModule):
         Returns:
             None
         """
+        fut_seq = self.cfg["MODEL"]["N_FUTURE_STEPS"]
         input_data = batch["input"]
-        target_output = batch["target_output"][:,0]
-        pred_output = self.forward(input_data)
-        loss = self.loss(pred_output.flatten(), target_output.flatten(), "val", self.current_epoch)
+        target_output = batch["target_output"][:,:fut_seq]
+        pred_output = self.forward(input_data, target_output, 0.)
+        #pred_output = self.forward(input_data)
+        loss = self.loss(pred_output.flatten(), target_output.flatten(),
+                target_output.shape[0], "val", self.current_epoch)
 
         self.log("val/loss", loss["loss"], sync_dist=True, prog_bar=True, on_epoch=True)
 
@@ -93,31 +115,35 @@ class BaseModel(pl.LightningModule):
         Returns:
             loss (dict): Multiple loss components
         """
+        fut_seq = self.cfg["MODEL"]["N_FUTURE_STEPS"]
         input_data = batch["input"]
-        target_output = batch["target_output"][:,0]
+        target_output = batch["target_output"][:,:fut_seq]
         idx = batch["idx"]
 
         batch_size, n_inputs, n_future_steps, H, W = input_data.shape
 
         start = time.time()
-        pred_output = self.forward(input_data)
+        pred_output = self.forward(input_data, target_output, 0.)
+        #pred_output = self.forward(input_data)
         inference_time = (time.time() - start) / batch_size
-        self.log("test/inference_time", inference_time, on_epoch=True)
-
-        loss = self.loss(pred_output, target_output, "test", self.current_epoch)
+        loss = self.loss(pred_output, target_output,
+                target_output.shape[0], "test", self.current_epoch)
 
         self.log("test/loss", loss["loss"], sync_dist=True, prog_bar=True, on_epoch=True)
+        self.log("test/inference_time", inference_time, on_epoch=True)
+
         for b in range(len(idx)):
-            target_img = target_output[b,0].cpu()*255.
-            pred_img = nn.Sigmoid()(pred_output[b,0]).cpu()*255.
-            plt.subplot(121)
-            plt.imshow(target_img)
-            plt.title('GT')
-            plt.subplot(122)
-            plt.imshow(pred_img)
-            plt.title('Pred')
-            plt.show()
-            plt.savefig(self.save_dir+str(idx[b].cpu().numpy())+'.png')
+            for t in range(fut_seq):
+                target_img = target_output[b,t,0].cpu()*255.
+                pred_img = nn.Sigmoid()(pred_output[b,t,0]).cpu()*255.
+                plt.subplot(121)
+                plt.imshow(target_img)
+                plt.title('GT')
+                plt.subplot(122)
+                plt.imshow(pred_img)
+                plt.title('Pred')
+                plt.show()
+                plt.savefig(self.save_dir+str(idx[b].cpu().numpy())+str(t)+'.png')
         return loss
 
     #def on_test_epoch_end(self, outputs):

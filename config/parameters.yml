@@ -1,5 +1,5 @@
 EXPERIMENT:
-  ID: peep_l1_1 # Give your experiment a unique ID which is used in the log
+  ID: many2many # Give your experiment a unique ID which is used in the log
   SEED: 2
 
 DATA_CONFIG:
@@ -11,7 +11,7 @@ DATA_CONFIG:
 MODEL:
   PEEP: True
   N_PAST_STEPS: 5 # Number of input range images
-  N_FUTURE_STEPS: 1 # Number of predicted future range images
+  N_FUTURE_STEPS: 3 # Number of predicted future range images
   MASK_THRESHOLD: 0.5 # Threshold for valid point mask classification
   NORM: batch # batch, group, none, instance
 
@@ -19,7 +19,7 @@ TRAIN:
   LR: 0.0001
   LR_EPOCH: 1
   LR_DECAY: 0.33
-  MAX_EPOCH: 20
+  MAX_EPOCH: 50
   BATCH_SIZE: 16
   BATCH_ACC: 1
   N_GPUS: 1

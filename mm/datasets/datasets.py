@@ -14,7 +14,7 @@ class MovingMnistModule(pl.LightningDataModule):
     """A Pytorch Lightning module for Datasets"""
 
     #def __init__(self, cfg):
-    def __init__(self):
+    def __init__(self, cfg):
         """Method to initizalize the dataset class
 
         Args:
@@ -24,7 +24,7 @@ class MovingMnistModule(pl.LightningDataModule):
           None
         """
         super(MovingMnistModule, self).__init__()
-        #self.cfg = cfg
+        self.cfg = cfg
 
 
     def setup(self, stage=None):
@@ -39,37 +39,37 @@ class MovingMnistModule(pl.LightningDataModule):
 
         self.train_loader = DataLoader(
             dataset=train_set,
-            batch_size=16,
+            batch_size=self.cfg["TRAIN"]["BATCH_SIZE"],
             shuffle=True,
-            num_workers=0, 
-            pin_memory=False,
+            num_workers=1,
+            pin_memory=True,
             drop_last=False,
             timeout=0,
-            persistent_workers=False
+            persistent_workers=True
         )
         #self.train_iter = iter(self.train_loader)
 
         self.valid_loader = DataLoader(
             dataset=val_set,
-            batch_size=16,
+            batch_size=self.cfg["TRAIN"]["BATCH_SIZE"],
             shuffle=False,
-            num_workers=0,
-            pin_memory=False,
+            num_workers=1,
+            pin_memory=True,
             drop_last=False,
             timeout=0,
-            persistent_workers=False
+            persistent_workers=True
         )
         #self.valid_iter = iter(self.valid_loader)
 
         self.test_loader = DataLoader(
             dataset=test_set,
-            batch_size=1,
+            batch_size=1, #self.cfg["TRAIN"]["BATCH_SIZE"],
             shuffle=False,
-            num_workers=0,
-            pin_memory=False,
+            num_workers=1,
+            pin_memory=True,
             drop_last=False,
             timeout=0,
-            persistent_workers=False
+            persistent_workers=True
         )
 
         #self.test_iter = iter(self.test_loader)
