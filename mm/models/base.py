@@ -47,7 +47,7 @@ class BaseModel(pl.LightningModule):
         #scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
         #        optimizer, 49, eta_min=1e-5, verbose=False)
         scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-                optimizer, factor=0.5, patience=2, verbose=True)
+                optimizer, factor=0.1, patience=3, verbose=True)
         #return [optimizer]#, [scheduler]
         return {
             "optimizer": optimizer,
@@ -75,15 +75,13 @@ class BaseModel(pl.LightningModule):
         target_output = batch["target_output"][:,:fut_seq]
         pred_output = self.forward(input_data, target_output,
                 self.teacher_forcing_ratio)
+        self.teacher_forcing_ratio = self.teacher_forcing_ratio/1.0001
         assert not torch.any(torch.isnan(pred_output))
         assert not torch.any(torch.isnan(target_output))
         loss = self.loss(pred_output, target_output, target_output.shape[0])
         self.log("train/loss", loss["loss"], sync_dist=True,
                 prog_bar=True, on_epoch=True)
         return loss
-
-    def on_train_epoch_end(self, outputs):
-        self.teacher_forcing_ratio = self.teacher_forcing_ratio/1.1
 
     def validation_step(self, batch, batch_idx):
         """Pytorch Lightning validation step including logging

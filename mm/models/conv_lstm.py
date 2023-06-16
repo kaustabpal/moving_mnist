@@ -7,7 +7,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import yaml
 import time
-torch.manual_seed(2020701021)
+#torch.manual_seed(2020701021)
 
 class ConvLSTMCell(nn.Module):
     '''
