@@ -12,6 +12,23 @@ from mm.models.base import BaseModel
 from mm.models.conv_lstm import ConvLSTM
 import random
 
+class LinearAttentionBlock(nn.Module):
+    def __init__(self, in_features, normalize_attn=True):
+        super(LinearAttentionBlock, self).__init__()
+        self.normalize_attn = normalize_attn
+        self.op = nn.Conv2d(in_channels=in_features, out_channels=1, kernel_size=1, padding=0, bias=False)
+
+    def forward(self, l, g):
+        B, C, H, W = l.size()
+        #print(torch.cat((l,g),1).shape)
+        c = self.op(l+g) # batch_sizex1xHxW
+        if self.normalize_attn:
+            a = F.softmax(c.view(B,1,-1), dim=2).view(B,1,H,W)
+        else:
+            a = torch.sigmoid(c)
+        g = torch.mul(a.expand_as(l), l)
+        return g, a
+
 class Many2One(BaseModel):
     def __init__(self, cfg, num_channels, num_kernels, kernel_size, padding, 
     activation, frame_size, num_layers, peep=True):
@@ -65,6 +82,7 @@ class One2Many(BaseModel):
     activation, frame_size, num_layers, peep=True):
         super(One2Many, self).__init__(cfg)
         self.cfg = cfg
+        self.num_kernels = num_kernels
 
         self.encoder = ConvLSTM(
                 input_dim=num_channels, hidden_dim=num_kernels,
@@ -77,7 +95,7 @@ class One2Many(BaseModel):
             kernel_size=kernel_size, padding=padding)
 
         self.decoder = ConvLSTM(
-                input_dim=num_channels, hidden_dim=num_kernels,
+                input_dim=num_kernels, hidden_dim=num_kernels,
                 kernel_size=kernel_size, padding=padding, 
                 activation=activation, frame_size=frame_size,
                 num_layers=num_layers, peep=peep, return_all_layers=True
@@ -89,9 +107,13 @@ class One2Many(BaseModel):
 
         self.norm = nn.BatchNorm3d(num_features=10)
 
+        self.attention = LinearAttentionBlock(in_features=num_kernels,
+                normalize_attn=True)
+
 
     def forward(self, X, Y, teacher_forcing_ratio):
         # X is of shape [batch, seq_length, num_channels, height, width]
+        batch, seq_length, num_channels, height, width = X.shape
         use_teacher_forcing = True\
                 if random.random() < teacher_forcing_ratio else False
         pred_frame = torch.zeros(X.shape[0],
@@ -111,12 +133,19 @@ class One2Many(BaseModel):
         '''
         output = output[-1]
         output = self.norm(output)
-        context_map = output[:,-1] # final layer's hidden state
-        context_map = self.conv1(context_map)
-        context_map = context_map.unsqueeze(1)
-        dec_input = context_map
+        g = output[:,-1] # final layer's hidden state
         for i in range(self.cfg["MODEL"]["N_FUTURE_STEPS"]):
+            context = torch.zeros((batch, self.num_kernels, height, width),
+                    device=self.device) # global context vector
+            for j in range(output.shape[1]):
+                l = output[:,j]
+                g_a, _ = self.attention(l,g)
+                context += g_a
+            context_map = self.conv1(context)
+            context_map = context_map.unsqueeze(1)
+            dec_input = context_map
             dec_output, h = self.decoder(dec_input, h)
+            g = dec_output[-1][:,-1]
             dec_input = dec_output[-1][:,-1]
             dec_input = self.conv2(dec_input)
             pred_frame[:,i,:,:,:] = dec_input
@@ -134,5 +163,18 @@ if __name__ == "__main__":
     model = One2Many(cfg, num_channels=1, num_kernels=64, 
                     kernel_size=(3, 3), padding=(1, 1), activation="relu", 
                     frame_size=(64, 64), num_layers=3)
+
+    #model = LinearAttentionBlock(in_features=64, normalize_attn=True)
     input = torch.randn(2,10,1,64,64)
-    pred = model(input)
+    pred = model(input, input, 0)
+    print(pred.shape)
+
+
+
+
+
+
+
+
+
+

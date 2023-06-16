@@ -130,7 +130,7 @@ if __name__ == "__main__":
         max_epochs=cfg["TRAIN"]["MAX_EPOCH"],
         log_every_n_steps=cfg["TRAIN"]["LOG_EVERY_N_STEPS"],
         callbacks=[lr_monitor, checkpoint, early_stop],
-        strategy = DDPStrategy(find_unused_parameters=True),
+        #strategy = DDPStrategy(find_unused_parameters=True),
         precision='16-mixed',
         check_val_every_n_epoch=1,
         limit_train_batches=1.0,
