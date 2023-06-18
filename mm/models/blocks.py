@@ -176,3 +176,186 @@ class ConvLSTM(nn.Module):
         if not isinstance(param, list):
             param = [param] * num_layers
         return param
+
+class LinearAttentionBlock(nn.Module):
+    def __init__(self, in_features, normalize_attn=True):
+        super(LinearAttentionBlock, self).__init__()
+        self.normalize_attn = normalize_attn
+        self.op = nn.Conv2d(in_channels=in_features, out_channels=1,
+                kernel_size=1, padding=0, bias=False)
+
+    def forward(self, l, g):
+        B, C, H, W = l.size()
+        #print(torch.cat((l,g),1).shape)
+        #c = self.op(l+g) # batch_sizex1xHxW
+        c = self.op(torch.cat((l,g),1)) # batch_sizex1xHxW
+        if self.normalize_attn:
+            a = F.softmax(c.view(B,1,-1), dim=2).view(B,1,H,W)
+        else:
+            a = torch.sigmoid(c)
+        l = torch.mul(a.expand_as(l), l)
+        return l, a
+
+class CNN_encoder(nn.Module):
+    '''
+    Takes in the sequence of input images and outputs the sequence of tensors
+    '''
+    def __init__(self, cfg, in_channels):
+        super(CNN_encoder, self).__init__()
+        self.cfg = cfg
+        self.channels = self.cfg["MODEL"]["CHANNELS"]
+        #self.out_channels = out_channels
+
+        self.input_layer = nn.Conv2d(in_channels=in_channels,
+                out_channels=self.channels[0],
+                kernel_size=(1,1), padding=(0,0), stride=(1,1), bias=False)
+        self.DownLayers = nn.ModuleList()
+        for i in range(len(self.channels) - 1):
+            self.DownLayers.append(
+                    DownBlock(
+                        self.channels[i],
+                        self.channels[i + 1],
+                        skip=False,
+                    )
+                )
+
+    def forward(self, input_tensor):
+        # X is a frame sequence (batch_size, seq_len, num_channels, height, width)
+        # Get the dimensions
+        b, seq_len, chnl, h, w = input_tensor.size()
+        cnn_out = torch.zeros(b,seq_len, self.channels[-1], 32, 32,
+                device=input_tensor.device)
+
+        for t in range(seq_len):
+            x = input_tensor[:,t]
+            x = self.input_layer(x)
+            for l in range(len(self.DownLayers)):
+                x = self.DownLayers[l](x)
+            cnn_out[:,t] = x
+        return cnn_out
+
+class CNN_decoder(nn.Module):
+    '''
+    Takes in the sequence of input images and outputs the sequence of tensors
+    '''
+    def __init__(self, cfg, in_channels):
+        super(CNN_decoder, self).__init__()
+        self.cfg = cfg
+        self.channels = self.cfg["MODEL"]["CHANNELS"]
+        #self.out_channels = out_channels
+
+        self.UpLayers = nn.ModuleList()
+        for i in reversed(range(len(self.channels) - 1)):
+            self.UpLayers.append(
+                    UpBlock(
+                        self.channels[i+1],
+                        self.channels[i],
+                        skip=False,
+                    )
+                )
+        self.output_layer = nn.Conv2d(in_channels=self.channels[0],
+                out_channels=1,
+                kernel_size=(1,1), padding=(0,0), stride=(1,1), bias=False)
+
+    def forward(self, input_tensor):
+        # X is a frame sequence (batch_size, seq_len, num_channels, height, width)
+        # Get the dimensions
+        b, chnl, h, w = input_tensor.size()
+        cnn_out = torch.zeros(b, 1, 64, 64,
+                device=input_tensor.device)
+        x = input_tensor
+        for l in range(len(self.UpLayers)):
+            x = self.UpLayers[l](x)
+        x = self.output_layer(x)
+        cnn_out = x
+        return cnn_out
+
+class DownBlock(nn.Module):
+    """Downsamples the input tensor"""
+    def __init__(
+        self, in_channels, out_channels, skip=False):
+        """Init module"""
+        super(DownBlock, self).__init__()
+        self.skip = skip
+        #self.circular_padding = cfg["MODEL"]["CIRCULAR_PADDING"]
+        self.conv0 = nn.Conv2d(in_channels=in_channels,
+                out_channels=in_channels,
+                kernel_size=(3,3), padding=(1,1), stride=(1,1), bias=True)
+        self.norm0 = nn.BatchNorm2d(in_channels)
+        self.relu = nn.LeakyReLU()
+        self.conv1 = nn.Conv2d(in_channels=in_channels,
+                out_channels=out_channels,
+                kernel_size=(2,2), padding=(0,0), stride=(2,2), bias=True)
+        self.norm1 = nn.BatchNorm2d(out_channels)
+
+    def forward(self, x):
+        """Forward pass for downsampling
+
+        Args:
+            x (torch.tensor): Input tensor
+
+        Returns:
+            torch.tensor: Downsampled output tensor
+        """
+        x = self.conv0(x)
+        x = self.norm0(x)
+        x = self.relu(x)
+        x = self.conv1(x)
+        x = self.norm1(x)
+        x = self.relu(x)
+        return x
+
+class UpBlock(nn.Module):
+    """Upsamples the input tensor using transposed convolutions"""
+    def __init__(self, in_channels, out_channels, skip=False):
+        """Init module"""
+        super(UpBlock, self).__init__()
+        self.skip = skip
+        #self.circular_padding = cfg["MODEL"]["CIRCULAR_PADDING"]
+        #if self.skip:
+        #    self.conv_skip = CustomConv3d(
+        #        2 * in_channels,
+        #        in_channels,
+        #        kernel_size=(3, 3, 3),
+        #        stride=(1, 1, 1),
+        #        padding=(1, 1, 1),
+        #        bias=False,
+        #        circular_padding=self.circular_padding,
+        #    )
+        #    self.norm_skip = Normalization(cfg, in_channels)
+        self.conv0 = nn.ConvTranspose2d(
+            in_channels,
+            in_channels,
+            kernel_size=(2, 2),
+            stride=(2, 2),
+            bias=True,
+        )
+        self.norm0 = nn.BatchNorm2d(in_channels)
+        self.relu = nn.LeakyReLU()
+        self.conv1 = nn.Conv2d(in_channels=in_channels,
+                out_channels=out_channels,
+                kernel_size=(3,3), padding=(1,1), stride=(1,1), bias=True)
+        self.norm1 = nn.BatchNorm2d(out_channels)
+
+    def forward(self, x, skip=None):
+        """Forward pass for upsampling
+
+        Args:
+            x (torch.tensor): Input tensor
+            skip (bool, optional): Use skip connection. Defaults to None.
+
+        Returns:
+            torch.tensor: Upsampled output tensor
+        """
+        #if self.skip:
+        #    x = torch.cat((x, skip), dim=1)
+        #    x = self.conv_skip(x)
+        #    x = self.norm_skip(x)
+        #    x = self.relu(x)
+        x = self.conv0(x)
+        x = self.norm0(x)
+        x = self.relu(x)
+        x = self.conv1(x)
+        x = self.norm1(x)
+        x = self.relu(x)
+        return x

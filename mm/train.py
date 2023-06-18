@@ -95,9 +95,9 @@ if __name__ == "__main__":
     #                kernel_size=(3, 3), padding=(1, 1), activation="tanh",
     #                frame_size=(64, 64), num_layers=3, peep=cfg["MODEL"]["PEEP"])
 
-    model = One2Many(cfg, num_channels=1, num_kernels=64, 
+    model = One2Many(cfg, num_channels=1, num_kernels=32,
                     kernel_size=(3, 3), padding=(1, 1), activation="tanh",
-                    frame_size=(64, 64), num_layers=3, peep=cfg["MODEL"]["PEEP"])
+                    frame_size=(32, 32), num_layers=3, peep=cfg["MODEL"]["PEEP"])
 
     ###### Load checkpoint
     if args.resume:
@@ -118,7 +118,7 @@ if __name__ == "__main__":
         save_last=True,
     )
     early_stop = EarlyStopping(monitor="val/loss", mode="min",
-            verbose=True, patience=30)
+            verbose=True, patience=10)
 
     ###### Trainer
     trainer = Trainer(

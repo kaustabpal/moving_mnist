@@ -9,7 +9,7 @@ import yaml
 import time
 torch.manual_seed(2020701021)
 from mm.models.base import BaseModel
-from mm.models.conv_lstm import ConvLSTM
+from mm.models.blocks import ConvLSTM
 
 class ConvLSTMCell(nn.Module):
 

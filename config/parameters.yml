@@ -14,13 +14,25 @@ MODEL:
   N_FUTURE_STEPS: 3 # Number of predicted future range images
   MASK_THRESHOLD: 0.5 # Threshold for valid point mask classification
   NORM: batch # batch, group, none, instance
+  CHANNELS: # Number of channels in encoder and decoder, respectively.
+    - 16
+    - 32
+      #    - 64
+      #    - 128
+      #    - 256
+      #    - 512
+  SKIP_IF_CHANNEL_SIZE: # Adds a skip connection between encoder and decoder at desired channels
+    - 32
+    - 64
+    - 128
+    - 256
 
 TRAIN:
   LR: 0.0001
   LR_EPOCH: 1
   LR_DECAY: 0.33
   MAX_EPOCH: 100
-  BATCH_SIZE: 16
+  BATCH_SIZE: 8
   BATCH_ACC: 1
   N_GPUS: 1
   LOG_EVERY_N_STEPS: 10

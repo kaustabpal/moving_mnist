@@ -134,14 +134,18 @@ class BaseModel(pl.LightningModule):
             for t in range(fut_seq):
                 target_img = target_output[b,t,0].cpu()*255.
                 pred_img = nn.Sigmoid()(pred_output[b,t,0]).cpu()*255.
-                plt.subplot(121)
+                plt.subplot(3,3,t+1)
                 plt.imshow(target_img)
+                plt.xticks([])
+                plt.yticks([])
                 plt.title('GT')
-                plt.subplot(122)
+                plt.subplot(3,3,(t+1)+fut_seq)
                 plt.imshow(pred_img)
+                plt.xticks([])
+                plt.yticks([])
                 plt.title('Pred')
-                plt.show()
-                plt.savefig(self.save_dir+str(idx[b].cpu().numpy())+str(t)+'.png')
+            plt.show()
+            plt.savefig(self.save_dir+str(idx[b].cpu().numpy())+'.png',bbox_inches='tight') #, pad_inches=0)
         return loss
 
     #def on_test_epoch_end(self, outputs):
