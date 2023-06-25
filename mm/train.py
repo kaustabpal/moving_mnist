@@ -15,7 +15,7 @@ from lightning.pytorch.strategies.ddp import DDPStrategy
 import torch
 import subprocess
 from mm.datasets.datasets import MovingMnistModule
-from mm.models.clstm_models import Many2One, One2Many
+from mm.models.clstm_models import Many2One, One2Many, SkipModel
 from mm.models.seq2seq import Seq2Seq
 
 if __name__ == "__main__":
@@ -95,9 +95,13 @@ if __name__ == "__main__":
     #                kernel_size=(3, 3), padding=(1, 1), activation="tanh",
     #                frame_size=(64, 64), num_layers=3, peep=cfg["MODEL"]["PEEP"])
 
-    model = One2Many(cfg, num_channels=1, num_kernels=32,
-                    kernel_size=(3, 3), padding=(1, 1), activation="tanh",
-                    frame_size=(32, 32), num_layers=3, peep=cfg["MODEL"]["PEEP"])
+    #model = One2Many(cfg, num_channels=1, num_kernels=32,
+    #                kernel_size=(3, 3), padding=(1, 1), activation="tanh",
+    #                img_size=(64, 64), num_layers=3, peep=cfg["MODEL"]["PEEP"])
+
+    model = SkipModel(cfg, num_channels=1, num_kernels=32, 
+                    kernel_size=(3, 3), padding=(1, 1), activation="relu", 
+                    img_size=(64, 64), num_layers=3, peep=False)
 
     ###### Load checkpoint
     if args.resume:

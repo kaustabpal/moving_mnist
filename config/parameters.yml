@@ -9,7 +9,7 @@ DATA_CONFIG:
     SHUFFLE: True
 
 MODEL:
-  PEEP: True
+  PEEP: False
   N_PAST_STEPS: 5 # Number of input range images
   N_FUTURE_STEPS: 3 # Number of predicted future range images
   MASK_THRESHOLD: 0.5 # Threshold for valid point mask classification
@@ -17,15 +17,15 @@ MODEL:
   CHANNELS: # Number of channels in encoder and decoder, respectively.
     - 16
     - 32
-      #    - 64
-      #    - 128
-      #    - 256
+    - 64
+    - 128
+    - 256
       #    - 512
   SKIP_IF_CHANNEL_SIZE: # Adds a skip connection between encoder and decoder at desired channels
     - 32
     - 64
     - 128
-    - 256
+      #    - 256
 
 TRAIN:
   LR: 0.0001

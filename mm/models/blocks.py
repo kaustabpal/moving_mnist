@@ -106,6 +106,7 @@ class ConvLSTM(nn.Module):
         self.num_layers = num_layers
         self.return_all_layers = return_all_layers
         self.peep = peep
+        self.activation = nn.ReLU6()
 
         cell_list = []
         for i in range(0, self.num_layers):
@@ -121,7 +122,7 @@ class ConvLSTM(nn.Module):
                                           peep=self.peep))
 
         self.cell_list = nn.ModuleList(cell_list)
-        self.norm = nn.BatchNorm2d(num_features=64)
+        #self.norm = nn.BatchNorm2d(num_features=64)
         self.dropout = nn.Dropout(p=0.2)
 
     def forward(self, input_tensor, hidden_state=None):
@@ -142,8 +143,9 @@ class ConvLSTM(nn.Module):
             h, c = hidden_state[layer_idx]
             output_inner = []
             for t in range(seq_len):
+                inp = self.activation(cur_layer_input[:, t, :, :, :])
                 h, c = self.cell_list[layer_idx](
-                    input_tensor = self.dropout(cur_layer_input[:, t, :, :, :]),\
+                    input_tensor = self.dropout(inp),\
                             cur_state=[h, c])
                 output_inner.append(h)
 
@@ -177,24 +179,64 @@ class ConvLSTM(nn.Module):
             param = [param] * num_layers
         return param
 
+#class LinearAttentionBlock(nn.Module):
+#    def __init__(self, in_features, normalize_attn=True):
+#        super(LinearAttentionBlock, self).__init__()
+#        self.normalize_attn = normalize_attn
+#        self.op = nn.Conv2d(in_channels=in_features, out_channels=1,
+#                kernel_size=1, padding=0, bias=False)
+#
+#    def forward(self, l, g):
+#        B, C, H, W = l.size()
+#        #print(torch.cat((l,g),1).shape)
+#        #c = self.op(l+g) # batch_sizex1xHxW
+#        c = self.op(torch.cat((l,g),1)) # batch_sizex1xHxW
+#        if self.normalize_attn:
+#            a = F.softmax(c.view(B,1,-1), dim=2).view(B,1,H,W)
+#        else:
+#            a = torch.sigmoid(c)
+#        l = torch.mul(a.expand_as(l), l)
+#        return l, a
+
 class LinearAttentionBlock(nn.Module):
     def __init__(self, in_features, normalize_attn=True):
         super(LinearAttentionBlock, self).__init__()
         self.normalize_attn = normalize_attn
+        self.W_l = nn.Conv2d(
+                in_channels=in_features, out_channels=in_features,
+                kernel_size=1, padding=0, bias=True)
+        self.W_g = nn.Conv2d(
+                in_channels=in_features, out_channels=in_features,
+                kernel_size=1, padding=0, bias=True)
+        self.phi = nn.Conv2d(in_channels=in_features, out_channels=1,
+                kernel_size=1, padding=0, bias=True)
         self.op = nn.Conv2d(in_channels=in_features, out_channels=1,
                 kernel_size=1, padding=0, bias=False)
 
-    def forward(self, l, g):
-        B, C, H, W = l.size()
-        #print(torch.cat((l,g),1).shape)
-        #c = self.op(l+g) # batch_sizex1xHxW
-        c = self.op(torch.cat((l,g),1)) # batch_sizex1xHxW
-        if self.normalize_attn:
-            a = F.softmax(c.view(B,1,-1), dim=2).view(B,1,H,W)
-        else:
-            a = torch.sigmoid(c)
-        l = torch.mul(a.expand_as(l), l)
-        return l, a
+    def forward(self, output, g):
+        batch, seq_len, _, H_out, W_out = output.shape
+        c = torch.zeros((batch, seq_len, 1, H_out, W_out),
+                device=output.device)
+        for i in range(output.shape[1]):
+            l = output[:,i]
+            B, C, H, W = l.size()
+            #print(torch.cat((l,g),1).shape)
+            #c = self.op(l+g) # batch_sizex1xHxW
+            l_ = self.W_l(l)
+            g_ = self.W_g(g)
+            c[:,i] =  self.phi(F.relu(l_+g_)) #self.op(torch.cat((l,g),1)) # batch_sizex1xHxW
+        min_val, _ = torch.min(c.view(batch,-1),dim=1)
+        min_val = min_val.view(batch,1,1,1,1)
+        c_new = c-min_val
+        sum_val = torch.sum(c_new.view(batch,-1),dim=1)
+        sum_val = sum_val.view(batch,1,1,1,1)
+        a = c_new/sum_val
+        #if self.normalize_attn:
+        #    a = F.softmax(c.view(batch, -1), dim=1).view(batch,seq_len,1,H_out,W_out)
+        #else:
+        #    a = torch.sigmoid(c)
+        output = torch.mul(a.expand_as(output), output)
+        return output, a
 
 class CNN_encoder(nn.Module):
     '''
@@ -204,35 +246,53 @@ class CNN_encoder(nn.Module):
         super(CNN_encoder, self).__init__()
         self.cfg = cfg
         self.channels = self.cfg["MODEL"]["CHANNELS"]
+        self.skip = self.cfg["MODEL"]["SKIP_IF_CHANNEL_SIZE"]
+        #print(self.skip)
+        #exit()
         #self.out_channels = out_channels
 
         self.input_layer = nn.Conv2d(in_channels=in_channels,
                 out_channels=self.channels[0],
                 kernel_size=(1,1), padding=(0,0), stride=(1,1), bias=False)
+
         self.DownLayers = nn.ModuleList()
+
         for i in range(len(self.channels) - 1):
-            self.DownLayers.append(
-                    DownBlock(
-                        self.channels[i],
-                        self.channels[i + 1],
-                        skip=False,
+            if self.channels[i + 1] in self.skip:
+                self.DownLayers.append(
+                        DownBlock(
+                            self.channels[i],
+                            self.channels[i + 1],
+                            skip=True,
+                        )
                     )
-                )
+            else:
+                self.DownLayers.append(
+                        DownBlock(
+                            self.channels[i],
+                            self.channels[i + 1],
+                            skip=False,
+                        )
+                    )
 
     def forward(self, input_tensor):
         # X is a frame sequence (batch_size, seq_len, num_channels, height, width)
         # Get the dimensions
         b, seq_len, chnl, h, w = input_tensor.size()
-        cnn_out = torch.zeros(b,seq_len, self.channels[-1], 32, 32,
+        skip_layers = []
+        chan_32 = torch.zeros(b, seq_len, 32, 32, 32, device=input_tensor.device)
+        cnn_out = torch.zeros(b,seq_len, self.channels[-1],
+                h//2**(len(self.channels)-1), w//2**(len(self.channels)-1),
                 device=input_tensor.device)
-
         for t in range(seq_len):
             x = input_tensor[:,t]
             x = self.input_layer(x)
             for l in range(len(self.DownLayers)):
                 x = self.DownLayers[l](x)
+                if self.DownLayers[l].skip:
+                    chan_32[:,t] = x
             cnn_out[:,t] = x
-        return cnn_out
+        return cnn_out, chan_32
 
 class CNN_decoder(nn.Module):
     '''
@@ -312,17 +372,11 @@ class UpBlock(nn.Module):
         super(UpBlock, self).__init__()
         self.skip = skip
         #self.circular_padding = cfg["MODEL"]["CIRCULAR_PADDING"]
-        #if self.skip:
-        #    self.conv_skip = CustomConv3d(
-        #        2 * in_channels,
-        #        in_channels,
-        #        kernel_size=(3, 3, 3),
-        #        stride=(1, 1, 1),
-        #        padding=(1, 1, 1),
-        #        bias=False,
-        #        circular_padding=self.circular_padding,
-        #    )
-        #    self.norm_skip = Normalization(cfg, in_channels)
+        if self.skip:
+            self.conv_skip = nn.Conv2d(in_channels=2*in_channels,
+                out_channels=in_channels,
+                kernel_size=(3,3), padding=(1,1), stride=(1,1), bias=False)
+            self.norm_skip = nn.BatchNorm2d(in_channels)
         self.conv0 = nn.ConvTranspose2d(
             in_channels,
             in_channels,
@@ -347,11 +401,11 @@ class UpBlock(nn.Module):
         Returns:
             torch.tensor: Upsampled output tensor
         """
-        #if self.skip:
-        #    x = torch.cat((x, skip), dim=1)
-        #    x = self.conv_skip(x)
-        #    x = self.norm_skip(x)
-        #    x = self.relu(x)
+        if self.skip:
+            x = torch.cat((x, skip), dim=1)
+            x = self.conv_skip(x)
+            x = self.norm_skip(x)
+            x = self.relu(x)
         x = self.conv0(x)
         x = self.norm0(x)
         x = self.relu(x)
